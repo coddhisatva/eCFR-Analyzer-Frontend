@@ -18,123 +18,110 @@ interface NavNode {
   expanded?: boolean;
 }
 
-// Function to build a tree from flat database nodes
+// Simplified tree-building function
 function buildNavigationTree(nodes: RegulationNode[]): NavNode[] {
   if (!nodes || nodes.length === 0) {
     return [];
   }
 
   // Create a map for quick lookup of nodes by their ID
-  const nodeMap = new Map();
+  const nodeMap = new Map<string, NavNode>();
   
   // First pass: Create NavNode objects for each regulation node
   nodes.forEach(node => {
-    // Skip nodes with invalid data
-    if (!node.id || !node.level_type) return;
+    if (!node.id) return;
 
-    // Create a path for browsing based on the id (which has the correct format)
-    // The id follows the pattern us/federal/ecfr/title=4 which we can use for navigation
+    // Create the browsing path
     const browsePath = node.id.includes('us/federal/ecfr/') 
-      ? '/' + node.id.split('us/federal/ecfr/')[1]  // Extract the path part after the prefix
-      : node.id;  // Fallback to the id itself if it doesn't match the pattern
+      ? '/' + node.id.split('us/federal/ecfr/')[1]
+      : node.id;
 
-    // Create a simplified version for the tree
+    // Create the NavNode
     const navNode: NavNode = {
       id: node.id,
-      type: node.level_type,
+      type: node.level_type || '',
       number: node.number || '',
       name: node.node_name || '',
       path: `/browse${browsePath}`,
-      expanded: false, // Default to collapsed
+      expanded: false,
       children: []
     };
     
     nodeMap.set(node.id, navNode);
   });
   
-  // Second pass: Build the tree structure based on parent-child relationships
+  // Get only the title nodes as our root nodes
   const rootNodes: NavNode[] = [];
-  
-  // First, identify nodes that represent titles by their level_type
   nodes.forEach(node => {
-    if (!node.id || !nodeMap.has(node.id)) return;
-    
-    // Only add nodes with level_type 'title' as root nodes
-    if (node.level_type === 'title') {
-      rootNodes.push(nodeMap.get(node.id));
-      console.log(`Added title as root: ${node.number} - ${node.node_name} (${node.id})`);
+    if (node.level_type === 'title' && nodeMap.has(node.id)) {
+      rootNodes.push(nodeMap.get(node.id)!);
     }
   });
   
-  console.log(`Found ${rootNodes.length} title nodes to use as roots`);
-  
-  // Now build child relationships for all non-root nodes
+  // Build the child relationships - this is key for hierarchy
   nodes.forEach(node => {
-    if (!node.id || !nodeMap.has(node.id)) return;
+    // Skip if it's a title (already in rootNodes) or doesn't have a parent
+    if (node.level_type === 'title' || !node.parent || !nodeMap.has(node.id)) return;
     
-    // Skip nodes that are already root nodes
-    if (rootNodes.includes(nodeMap.get(node.id))) return;
-    
-    const navNode = nodeMap.get(node.id);
-    const hasValidParent = node.parent && nodeMap.has(node.parent);
-    
-    // If this node has a parent and the parent exists in our map
-    if (hasValidParent) {
+    // Get the current node and check if the parent exists
+    const navNode = nodeMap.get(node.id)!;
+    if (nodeMap.has(node.parent)) {
       // Add this node as a child of its parent
-      const parentNavNode = nodeMap.get(node.parent);
-      if (!parentNavNode.children) {
-        parentNavNode.children = [];
-      }
+      const parentNavNode = nodeMap.get(node.parent)!;
       parentNavNode.children.push(navNode);
     }
   });
   
-  // Debug: what are we using as root nodes?
-  rootNodes.forEach(node => {
-    console.log(`Root node: ${node.type} ${node.number} (${node.id})`);
-  });
-  
-  // Sort all nodes by their number (converting to number if possible for correct sorting)
-  const sortNodes = (nodes: NavNode[]): NavNode[] => {
-    if (!nodes || nodes.length === 0) return [];
-    
+  // Helper function to sort nodes at each level
+  const sortLevel = (nodes: NavNode[]): NavNode[] => {
     return nodes.sort((a, b) => {
-      // Try to parse numbers for numeric sorting
+      // Define order by level_type first
+      const typeOrder = {
+        'title': 0,
+        'chapter': 1,
+        'subchapter': 2,
+        'part': 3,
+        'subpart': 4,
+        'section': 5
+      };
+      
+      // If types are different, sort by type order
+      if (a.type !== b.type) {
+        return (typeOrder[a.type as keyof typeof typeOrder] || 999) - 
+               (typeOrder[b.type as keyof typeof typeOrder] || 999);
+      }
+      
+      // If types are the same, sort by number
+      // Extract numeric part for proper numeric sorting
       const aNum = parseInt(a.number.replace(/\D/g, ''));
       const bNum = parseInt(b.number.replace(/\D/g, ''));
       
-      // If both are valid numbers, sort numerically
       if (!isNaN(aNum) && !isNaN(bNum)) {
         return aNum - bNum;
       }
       
-      // Otherwise, sort alphanumerically
+      // Fallback to string comparison with numeric sorting
       return a.number.localeCompare(b.number, undefined, { numeric: true });
     });
   };
   
-  // Process the entire tree recursively to sort each level
-  const processTree = (nodes: NavNode[]): NavNode[] => {
+  // Recursively sort the entire tree
+  const sortTreeRecursively = (nodes: NavNode[]): NavNode[] => {
     // Sort current level
-    const sortedNodes = sortNodes(nodes);
+    const sortedNodes = sortLevel(nodes);
     
-    // Process children recursively
+    // Sort each node's children recursively
     sortedNodes.forEach(node => {
-      if (node.children && node.children.length > 0) {
-        node.children = processTree(node.children);
+      if (node.children.length > 0) {
+        node.children = sortTreeRecursively(node.children);
       }
     });
     
     return sortedNodes;
   };
   
-  // Get the final sorted tree
-  const sortedTree = processTree(rootNodes);
-  
-  // Log some stats for debugging
-  console.log(`Built navigation tree with ${sortedTree.length} root nodes (titles)`);
-  
-  return sortedTree;
+  // Return the sorted tree
+  return sortTreeRecursively(rootNodes);
 }
 
 // Fetch regulation nodes directly from Supabase
