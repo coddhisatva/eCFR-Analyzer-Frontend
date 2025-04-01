@@ -22,7 +22,7 @@ export default function RootLayout({
         <div className="flex flex-col h-screen">
           <Navbar />
           <div className="flex flex-1 overflow-hidden">
-            <div className="w-80 border-r overflow-y-auto flex-shrink-0">
+            <div className="w-64 border-r overflow-y-auto flex-shrink-0">
               <Sidebar />
             </div>
             <main className="flex-1 overflow-y-auto p-4">

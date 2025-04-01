@@ -35,7 +35,7 @@ export default function RegulationPage({ params }: RegulationPageProps) {
   `;
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-4xl">
       {/* Breadcrumb navigation */}
       <div className="flex items-center mb-2 text-sm">
         {breadcrumbs.map((item, i) => (
@@ -54,12 +54,11 @@ export default function RegulationPage({ params }: RegulationPageProps) {
       </h1>
       <p className="text-gray-600 mb-6">{title.description}</p>
 
-      {/* Content tabs */}
+      {/* Content tabs - now just content and history */}
       <Tabs defaultValue="content" className="w-full">
         <TabsList>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
         
         <TabsContent value="content">
@@ -74,30 +73,28 @@ export default function RegulationPage({ params }: RegulationPageProps) {
             <p className="text-gray-600">
               Historical versions and amendments will be displayed here.
             </p>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="analytics">
-          <div className="py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-4 rounded-md border">
-                <h3 className="font-medium mb-2">Word Count</h3>
-                <p className="text-2xl font-bold">347</p>
-              </div>
-              <div className="bg-white p-4 rounded-md border">
-                <h3 className="font-medium mb-2">Citation Count</h3>
-                <p className="text-2xl font-bold">12</p>
-              </div>
-              <div className="bg-white p-4 rounded-md border">
-                <h3 className="font-medium mb-2">Last Updated</h3>
-                <p className="text-2xl font-bold">Mar 2023</p>
-              </div>
-              <div className="bg-white p-4 rounded-md border">
-                <h3 className="font-medium mb-2">Key Terms</h3>
-                <div className="flex flex-wrap gap-1">
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">rule</span>
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">administrative</span>
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">procedure</span>
+            <div className="mt-4">
+              <h3 className="font-medium mb-2">Version History</h3>
+              <div className="border rounded-md">
+                <div className="grid grid-cols-3 p-3 border-b bg-gray-50 font-medium">
+                  <div>Date</div>
+                  <div>Change Type</div>
+                  <div>Description</div>
+                </div>
+                <div className="grid grid-cols-3 p-3 border-b">
+                  <div>Mar 12, 2023</div>
+                  <div>Amendment</div>
+                  <div>Updated definition in § 21.2(a)</div>
+                </div>
+                <div className="grid grid-cols-3 p-3 border-b">
+                  <div>Jan 5, 2022</div>
+                  <div>Revision</div>
+                  <div>Added clarity to purpose statement</div>
+                </div>
+                <div className="grid grid-cols-3 p-3">
+                  <div>Nov 20, 2020</div>
+                  <div>Initial</div>
+                  <div>Original publication</div>
                 </div>
               </div>
             </div>
