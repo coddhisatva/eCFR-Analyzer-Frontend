@@ -3,6 +3,7 @@
 import { BarChart3, FileText, Hash, History, Link2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 export function AnalyticsSidebar() {
   const pathname = usePathname();
@@ -88,9 +89,9 @@ export function AnalyticsSidebar() {
             <ul className="text-sm space-y-1">
               {analytics.relatedSections.map((section) => (
                 <li key={section.id}>
-                  <a href="#" className="text-blue-600 hover:underline">
+                  <Link href="#" className="text-blue-600 hover:underline">
                     § {section.id}: {section.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -130,15 +131,15 @@ export function AnalyticsSidebar() {
             <ul className="text-sm space-y-1">
               <li className="flex justify-between">
                 <span>Mar 2023</span>
-                <span className="text-blue-600 hover:underline cursor-pointer">View</span>
+                <Link href="#" className="text-blue-600 hover:underline cursor-pointer">View</Link>
               </li>
               <li className="flex justify-between">
                 <span>Jan 2022</span>
-                <span className="text-blue-600 hover:underline cursor-pointer">View</span>
+                <Link href="#" className="text-blue-600 hover:underline cursor-pointer">View</Link>
               </li>
               <li className="flex justify-between">
                 <span>Nov 2020</span>
-                <span className="text-blue-600 hover:underline cursor-pointer">View</span>
+                <Link href="#" className="text-blue-600 hover:underline cursor-pointer">View</Link>
               </li>
             </ul>
           </CardContent>

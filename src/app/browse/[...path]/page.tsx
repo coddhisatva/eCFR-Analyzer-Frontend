@@ -1,15 +1,14 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Link from "next/link";
 
-interface RegulationPageProps {
-  params: {
-    path: string[];
-  };
-}
-
-export default function RegulationPage({ params }: RegulationPageProps) {
-  // This would be fetched from the database based on the path
-  const pathString = params.path.join("/");
-  console.log("Current path:", pathString); // Using pathString to avoid the unused variable error
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ path: string[] }>
+}) {
+  const { path } = await params;
+  const pathString = path.join("/");
+  console.log("Path:", pathString);
 
   // Mock data - would come from your database
   const title = {
@@ -42,9 +41,9 @@ export default function RegulationPage({ params }: RegulationPageProps) {
         {breadcrumbs.map((item, i) => (
           <div key={item.path} className="flex items-center">
             {i > 0 && <span className="mx-2">›</span>}
-            <a href={item.path} className="text-blue-600 hover:underline">
+            <Link href={item.path} className="text-blue-600 hover:underline">
               {item.label}
-            </a>
+            </Link>
           </div>
         ))}
       </div>
