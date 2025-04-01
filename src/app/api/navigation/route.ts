@@ -55,13 +55,29 @@ function buildNavigationTree(nodes: RegulationNode[]): NavNode[] {
   // Second pass: Build the tree structure based on parent-child relationships
   const rootNodes: NavNode[] = [];
   
+  // First, identify nodes that represent titles by their ID pattern
   nodes.forEach(node => {
-    // Skip invalid nodes
     if (!node.id || !nodeMap.has(node.id)) return;
     
-    const navNode = nodeMap.get(node.id);
+    // Look for nodes with "title=" in their ID path - these are the actual titles
+    if (node.id.includes('/title=') && !node.id.includes('/chapter=') && 
+        !node.id.includes('/part=') && !node.id.includes('/section=') && 
+        !node.id.includes('/subpart=') && !node.id.includes('/subchap=')) {
+      rootNodes.push(nodeMap.get(node.id));
+      console.log(`Added title as root: ${node.number} - ${node.node_name} (${node.id})`);
+    }
+  });
+  
+  console.log(`Found ${rootNodes.length} title nodes to use as roots`);
+  
+  // Now build child relationships for all non-root nodes
+  nodes.forEach(node => {
+    if (!node.id || !nodeMap.has(node.id)) return;
     
-    // Check if this node has a parent that exists in our map
+    // Skip nodes that are already root nodes
+    if (rootNodes.includes(nodeMap.get(node.id))) return;
+    
+    const navNode = nodeMap.get(node.id);
     const hasValidParent = node.parent && nodeMap.has(node.parent);
     
     // If this node has a parent and the parent exists in our map
@@ -72,33 +88,8 @@ function buildNavigationTree(nodes: RegulationNode[]): NavNode[] {
         parentNavNode.children = [];
       }
       parentNavNode.children.push(navNode);
-    } 
-    // Consider this a root node if:
-    // 1. It has no parent or the parent doesn't exist in our dataset, AND
-    // 2. Its level_type contains "title" (case-insensitive)
-    else if (node.level_type && node.level_type.toLowerCase().includes('title')) {
-      rootNodes.push(navNode);
     }
   });
-  
-  // If we didn't find any titles, check if we need to be more flexible
-  if (rootNodes.length === 0) {
-    console.log('No title nodes found using strict criteria, checking for top-level nodes...');
-    
-    // Identify nodes that don't have parents (or their parents don't exist in our data)
-    // These might be top-level nodes we can treat as roots
-    nodes.forEach(node => {
-      if (!node.id || !nodeMap.has(node.id)) return;
-      
-      const navNode = nodeMap.get(node.id);
-      const hasValidParent = node.parent && nodeMap.has(node.parent);
-      
-      if (!hasValidParent && !rootNodes.includes(navNode)) {
-        console.log(`Adding top-level node as root: ${node.level_type} ${node.number} (${node.id})`);
-        rootNodes.push(navNode);
-      }
-    });
-  }
   
   // Debug: what are we using as root nodes?
   rootNodes.forEach(node => {
@@ -151,16 +142,37 @@ function buildNavigationTree(nodes: RegulationNode[]): NavNode[] {
 // Fetch regulation nodes directly from Supabase
 async function fetchRegulationNodes(): Promise<RegulationNode[]> {
   try {
-    // Fetch all nodes from the nodes table
-    const { data, error } = await supabase
+    // First, query specifically for title nodes by ID pattern
+    const { data: titleData, error: titleError } = await supabase
       .from('nodes')
-      .select('*');
+      .select('*')
+      .ilike('id', '%/title=%')
+      .not('id', 'ilike', '%/chapter=%')
+      .not('id', 'ilike', '%/part=%')
+      .not('id', 'ilike', '%/section=%')
+      .not('id', 'ilike', '%/subpart=%')
+      .not('id', 'ilike', '%/subchap=%');
     
-    if (error) {
-      throw error;
+    if (titleError) {
+      throw titleError;
     }
     
-    console.log(`Fetched ${data?.length || 0} nodes from Supabase`);
+    // Then query for the rest of the nodes
+    const { data: otherData, error: otherError } = await supabase
+      .from('nodes')
+      .select('*')
+      .limit(100000);
+    
+    if (otherError) {
+      throw otherError;
+    }
+    
+    // Combine the datasets, with titles taking precedence
+    const titleIds = new Set(titleData?.map(node => node.id) || []);
+    const otherFilteredData = (otherData || []).filter(node => !titleIds.has(node.id));
+    const data = [...(titleData || []), ...(otherFilteredData || [])];
+    
+    console.log(`Fetched ${titleData?.length || 0} title nodes and ${otherFilteredData.length} other nodes (total: ${data.length})`);
     
     // Debug: identify what level types are actually in the database
     const levelTypes = new Set<string>();
@@ -171,6 +183,7 @@ async function fetchRegulationNodes(): Promise<RegulationNode[]> {
     });
     
     console.log('Available level types in database:', Array.from(levelTypes).join(', '));
+    console.log('Title nodes:', titleData?.map(n => `${n.number} - ${n.node_name}`).join(', ') || 'None');
     
     return data as RegulationNode[];
   } catch (error) {
