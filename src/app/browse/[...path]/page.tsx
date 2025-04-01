@@ -14,20 +14,31 @@ async function fetchRegulationData(pathArray: string[]) {
   const pathString = pathArray.join('/');
   
   try {
-    // Create a properly encoded URL - ensuring no double encoding happens
-    const apiUrl = `/api/regulation?path=${pathString}`;
-    console.log('Fetching from URL:', apiUrl);
+    // For server-to-server API calls within the same app, we can use a relative URL
+    // with properly encoded parameters
+    const params = new URLSearchParams();
+    params.append('path', pathString);
+    
+    const apiUrl = `/api/regulation?${params.toString()}`;
+    console.log('Fetching regulation data from:', apiUrl);
     
     const response = await fetch(apiUrl, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store', // Disable caching for now
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store'
     });
 
     if (!response.ok) {
-      throw new Error(`Error fetching regulation data: ${response.statusText}`);
+      // Handle HTTP errors
+      const errorText = await response.text();
+      let errorMessage;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+      } catch {
+        errorMessage = `HTTP error! status: ${response.status}, text: ${errorText.slice(0, 100)}`;
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();

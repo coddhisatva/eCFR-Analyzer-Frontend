@@ -18,7 +18,7 @@ interface SidebarProps {
   initialData?: NavNode[];
 }
 
-// Placeholder data - only used if API call fails
+// Empty placeholder - will be populated from API
 const placeholderData: NavNode[] = [];
 
 export function Sidebar({ initialData = placeholderData }: SidebarProps) {
@@ -67,9 +67,29 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
     setNavData(updateNodes(navData));
   };
 
+  // Format the node label for display
+  const formatNodeLabel = (node: NavNode): string => {
+    // Special formatting for different node types
+    switch (node.type) {
+      case 'title':
+        return `Title ${node.number}`;
+      case 'chapter':
+        return `Chapter ${node.number}`;
+      case 'subchapter':
+        return `Subchapter ${node.number}`;
+      case 'part':
+        return `Part ${node.number}`;
+      case 'section':
+        return `Section ${node.number}`;
+      default:
+        return `${node.type.charAt(0).toUpperCase() + node.type.slice(1)} ${node.number}`;
+    }
+  };
+
   const renderNavNode = (node: NavNode, depth = 0) => {
     const hasChildren = !!node.children?.length;
     const paddingLeft = `${(depth + 1) * 0.75}rem`;
+    const nodeLabel = formatNodeLabel(node);
 
     return (
       <div key={node.id} className="w-full">
@@ -91,7 +111,7 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
             className="flex-1 truncate"
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="font-semibold">{`${node.type === 'title' ? 'Title' : node.type === 'chapter' ? 'Chapter' : node.type === 'subchapter' ? 'Subchapter' : node.type === 'part' ? 'Part' : 'Section'} ${node.number}`}</span>
+            <span className="font-semibold">{nodeLabel}</span>
             {node.name && `: ${node.name}`}
           </Link>
         </div>

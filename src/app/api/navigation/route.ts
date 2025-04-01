@@ -29,13 +29,22 @@ function buildNavigationTree(nodes: RegulationNode[]): NavNode[] {
   
   // First pass: Create NavNode objects for each regulation node
   nodes.forEach(node => {
+    // Skip nodes with invalid data
+    if (!node.id || !node.level_type) return;
+
+    // Create a path for browsing based on the id (which has the correct format)
+    // The id follows the pattern us/federal/ecfr/title=4 which we can use for navigation
+    const browsePath = node.id.includes('us/federal/ecfr/') 
+      ? '/' + node.id.split('us/federal/ecfr/')[1]  // Extract the path part after the prefix
+      : node.id;  // Fallback to the id itself if it doesn't match the pattern
+
     // Create a simplified version for the tree
     const navNode: NavNode = {
       id: node.id,
       type: node.level_type,
-      number: node.number,
-      name: node.node_name,
-      path: `/browse${node.link}`,
+      number: node.number || '',
+      name: node.node_name || '',
+      path: `/browse${browsePath}`,
       expanded: false, // Default to collapsed
       children: []
     };
@@ -43,64 +52,100 @@ function buildNavigationTree(nodes: RegulationNode[]): NavNode[] {
     nodeMap.set(node.id, navNode);
   });
   
-  // Second pass: Build the tree structure
+  // Second pass: Build the tree structure based on parent-child relationships
   const rootNodes: NavNode[] = [];
   
   nodes.forEach(node => {
+    // Skip invalid nodes
+    if (!node.id || !nodeMap.has(node.id)) return;
+    
     const navNode = nodeMap.get(node.id);
     
-    if (node.parent && nodeMap.has(node.parent)) {
-      // This node has a parent, add it as a child
+    // Check if this node has a parent that exists in our map
+    const hasValidParent = node.parent && nodeMap.has(node.parent);
+    
+    // If this node has a parent and the parent exists in our map
+    if (hasValidParent) {
+      // Add this node as a child of its parent
       const parentNavNode = nodeMap.get(node.parent);
       if (!parentNavNode.children) {
         parentNavNode.children = [];
       }
       parentNavNode.children.push(navNode);
-    } else {
-      // This is a root node (no parent or parent not in our dataset)
+    } 
+    // Consider this a root node if:
+    // 1. It has no parent or the parent doesn't exist in our dataset, AND
+    // 2. Its level_type contains "title" (case-insensitive)
+    else if (node.level_type && node.level_type.toLowerCase().includes('title')) {
       rootNodes.push(navNode);
     }
   });
   
-  // Sort children by their level type and number
-  const sortNavNodes = (nodes: NavNode[]) => {
-    if (!nodes) return [];
+  // If we didn't find any titles, check if we need to be more flexible
+  if (rootNodes.length === 0) {
+    console.log('No title nodes found using strict criteria, checking for top-level nodes...');
+    
+    // Identify nodes that don't have parents (or their parents don't exist in our data)
+    // These might be top-level nodes we can treat as roots
+    nodes.forEach(node => {
+      if (!node.id || !nodeMap.has(node.id)) return;
+      
+      const navNode = nodeMap.get(node.id);
+      const hasValidParent = node.parent && nodeMap.has(node.parent);
+      
+      if (!hasValidParent && !rootNodes.includes(navNode)) {
+        console.log(`Adding top-level node as root: ${node.level_type} ${node.number} (${node.id})`);
+        rootNodes.push(navNode);
+      }
+    });
+  }
+  
+  // Debug: what are we using as root nodes?
+  rootNodes.forEach(node => {
+    console.log(`Root node: ${node.type} ${node.number} (${node.id})`);
+  });
+  
+  // Sort all nodes by their number (converting to number if possible for correct sorting)
+  const sortNodes = (nodes: NavNode[]): NavNode[] => {
+    if (!nodes || nodes.length === 0) return [];
     
     return nodes.sort((a, b) => {
-      // First sort by type if different
-      if (a.type !== b.type) {
-        // Define a type order for sorting
-        const typeOrder: Record<string, number> = {
-          'title': 1,
-          'chapter': 2,
-          'subchapter': 3,
-          'part': 4,
-          'section': 5
-        };
-        return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
+      // Try to parse numbers for numeric sorting
+      const aNum = parseInt(a.number.replace(/\D/g, ''));
+      const bNum = parseInt(b.number.replace(/\D/g, ''));
+      
+      // If both are valid numbers, sort numerically
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
       }
       
-      // Then sort by number if type is the same
+      // Otherwise, sort alphanumerically
       return a.number.localeCompare(b.number, undefined, { numeric: true });
     });
   };
   
-  // Sort the children recursively
-  const processSorting = (nodes: NavNode[]) => {
-    if (!nodes) return [];
+  // Process the entire tree recursively to sort each level
+  const processTree = (nodes: NavNode[]): NavNode[] => {
+    // Sort current level
+    const sortedNodes = sortNodes(nodes);
     
-    const sortedNodes = sortNavNodes(nodes);
-    
+    // Process children recursively
     sortedNodes.forEach(node => {
       if (node.children && node.children.length > 0) {
-        node.children = processSorting(node.children);
+        node.children = processTree(node.children);
       }
     });
     
     return sortedNodes;
   };
   
-  return processSorting(rootNodes);
+  // Get the final sorted tree
+  const sortedTree = processTree(rootNodes);
+  
+  // Log some stats for debugging
+  console.log(`Built navigation tree with ${sortedTree.length} root nodes (titles)`);
+  
+  return sortedTree;
 }
 
 // Fetch regulation nodes directly from Supabase
@@ -115,7 +160,18 @@ async function fetchRegulationNodes(): Promise<RegulationNode[]> {
       throw error;
     }
     
-    console.log(`Fetched ${data.length} nodes from Supabase`);
+    console.log(`Fetched ${data?.length || 0} nodes from Supabase`);
+    
+    // Debug: identify what level types are actually in the database
+    const levelTypes = new Set<string>();
+    data?.forEach(node => {
+      if (node.level_type) {
+        levelTypes.add(node.level_type.toLowerCase());
+      }
+    });
+    
+    console.log('Available level types in database:', Array.from(levelTypes).join(', '));
+    
     return data as RegulationNode[];
   } catch (error) {
     console.error('Error fetching regulation nodes from Supabase:', error);

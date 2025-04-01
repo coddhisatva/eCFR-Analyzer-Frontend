@@ -20,39 +20,74 @@ export async function GET(request: NextRequest) {
   try {
     // Extract path from query string and ensure it's properly decoded
     const url = new URL(request.url);
-    const path = url.searchParams.get('path');
+    const encodedPath = url.searchParams.get('path');
     
-    if (!path) {
+    if (!encodedPath) {
       return NextResponse.json(
         { error: 'Path parameter is required' },
         { status: 400 }
       );
     }
     
-    // Ensure path is properly decoded (in case it was encoded in the URL)
-    const decodedPath = decodeURIComponent(path);
+    // Ensure path is properly decoded
+    const path = decodeURIComponent(encodedPath);
     
     // Log the request for debugging
-    console.log('Received path request:', decodedPath);
+    console.log('Processing regulation request for path:', path);
 
-    // Parse path segments to identify the node
-    const pathSegments = decodedPath.split('/');
-    const lastSegment = pathSegments[pathSegments.length - 1] || '';
-    const [levelType, number] = lastSegment.split('=');
-    
-    console.log(`Looking up ${levelType} with number ${number}`);
+    // Convert the path to a node ID format
+    // If path is like 'title=4/chapter=I', convert to 'us/federal/ecfr/title=4/chapter=I'
+    const nodeId = path.startsWith('us/federal/ecfr/') ? path : `us/federal/ecfr/${path}`;
+    console.log('Looking up node with ID:', nodeId);
 
-    // First, get the node info
-    const { data: nodeInfo, error: nodeError } = await supabase
+    // First, try to get the node directly by ID
+    let { data: nodeData, error: nodeError } = await supabase
       .from('nodes')
       .select('*')
-      .eq('level_type', levelType)
-      .eq('number', number)
-      .single();
+      .eq('id', nodeId);
     
     if (nodeError) {
       throw new Error(`Error fetching node: ${nodeError.message}`);
     }
+    
+    // If node not found directly, try to parse the path
+    if (!nodeData || nodeData.length === 0) {
+      // Parse path segments to identify the node
+      const pathSegments = path.split('/');
+      const lastSegment = pathSegments[pathSegments.length - 1] || '';
+      const [levelType, number] = lastSegment.split('=');
+      
+      if (!levelType || !number) {
+        return NextResponse.json(
+          { error: 'Invalid path format. Expected format: level_type=number' },
+          { status: 400 }
+        );
+      }
+      
+      console.log(`Fallback: Looking up ${levelType} with number ${number}`);
+
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('nodes')
+        .select('*')
+        .eq('level_type', levelType)
+        .eq('number', number);
+      
+      if (fallbackError) {
+        throw new Error(`Error in fallback node fetch: ${fallbackError.message}`);
+      }
+      
+      if (!fallbackData || fallbackData.length === 0) {
+        return NextResponse.json(
+          { error: `No node found for path: ${path}` },
+          { status: 404 }
+        );
+      }
+      
+      nodeData = fallbackData;
+    }
+    
+    // Get the first matching node
+    const nodeInfo = nodeData[0];
     
     // If this is a content node, fetch the content chunks
     let content: string[] = [];
@@ -68,7 +103,7 @@ export async function GET(request: NextRequest) {
       }
       
       // Extract content from chunks
-      content = contentChunks.map((chunk: ContentChunk) => chunk.content);
+      content = contentChunks?.map((chunk: ContentChunk) => chunk.content) || [];
     }
     
     // Get child nodes if this is a structure node
@@ -83,7 +118,7 @@ export async function GET(request: NextRequest) {
         throw new Error(`Error fetching child nodes: ${childrenError.message}`);
       }
       
-      childNodes = children as RegulationNode[];
+      childNodes = children || [];
     }
     
     // Return the complete regulation data
