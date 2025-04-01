@@ -1,43 +1,60 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
+import RegulationContent from "@/components/regulation/content";
+import RegulationStructure from "@/components/regulation/structure";
+import { RegulationPathParams } from "@/types/regulation";
 
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ path: string[] }>
-}) {
+type PageProps = {
+  params: Promise<RegulationPathParams>;
+};
+
+async function fetchRegulationData(pathArray: string[]) {
+  // Convert path array into a path string in the format expected by the API
+  // e.g., ['title=4', 'chapter=I'] => 'title=4/chapter=I'
+  const pathString = pathArray.join('/');
+  
+  // For server component, we can use a relative URL
+  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || ''}/api/regulation?path=${encodeURIComponent(pathString)}`;
+  
+  const response = await fetch(apiUrl, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store', // Disable caching for now
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error fetching regulation data: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export default async function Page({ params }: PageProps) {
   const { path } = await params;
   const pathString = path.join("/");
   console.log("Path:", pathString);
 
-  // Mock data - would come from your database
-  const title = {
-    number: "4",
-    name: "Accounts",
-    section: "Section 21-29",
-    description: "General Procedures • Government Accountability Office"
-  };
+  // Fetch the regulation data
+  const regulationData = await fetchRegulationData(path);
+  const { nodeInfo, content, childNodes } = regulationData;
 
-  const breadcrumbs = [
-    { label: "Title 4", path: "/browse/title=4" },
-    { label: "Chapter I", path: "/browse/title=4/chapter=I" },
-    { label: "Subchapter B", path: "/browse/title=4/chapter=I/subchapter=B" },
-    { label: "Sections 21-29", path: "/browse/title=4/chapter=I/subchapter=B/section=21-29" }
-  ];
-
-  const content = `
-    <h2 class="text-xl font-semibold mt-6 mb-2">§ 21.1 Purpose.</h2>
-    <p class="mb-4">This part sets forth the administrative procedures of the Government Accountability Office for the issuance, amendment, and revocation of regulations and for the formulation and publication of rules.</p>
-    
-    <h2 class="text-xl font-semibold mt-6 mb-2">§ 21.2 Definitions.</h2>
-    <p class="mb-4">For purposes of this part:</p>
-    <p class="mb-4">(a) Rule means the whole or a part of a statement of policy or interpretation or prescription of general application, designed to have general effect...</p>
-  `;
+  // Build breadcrumbs from path segments
+  const breadcrumbs = path.map((segment, index) => {
+    const breadcrumbPath = '/' + path.slice(0, index + 1).join('/');
+    const [type, number] = segment.split('=');
+    const label = `${type.charAt(0).toUpperCase() + type.slice(1)} ${number}`;
+    return { label, path: `/browse${breadcrumbPath}` };
+  });
+  
+  // Add a home breadcrumb at the beginning
+  breadcrumbs.unshift({ label: 'Browse', path: '/browse' });
 
   return (
     <div className="max-w-4xl">
       {/* Breadcrumb navigation */}
-      <div className="flex items-center mb-2 text-sm">
+      <div className="flex flex-wrap items-center mb-2 text-sm">
         {breadcrumbs.map((item, i) => (
           <div key={item.path} className="flex items-center">
             {i > 0 && <span className="mx-2">›</span>}
@@ -50,11 +67,11 @@ export default async function Page({
 
       {/* Title */}
       <h1 className="text-2xl font-bold mb-1">
-        {breadcrumbs.map(b => b.label).join(' › ')}
+        {nodeInfo.node_name}
       </h1>
-      <p className="text-gray-600 mb-6">{title.description}</p>
+      <p className="text-gray-600 mb-6">{nodeInfo.citation}</p>
 
-      {/* Content tabs - now just content and history */}
+      {/* Content tabs - content and history */}
       <Tabs defaultValue="content" className="w-full">
         <TabsList>
           <TabsTrigger value="content">Content</TabsTrigger>
@@ -62,10 +79,19 @@ export default async function Page({
         </TabsList>
         
         <TabsContent value="content">
-          <div 
-            className="prose prose-blue max-w-none mt-4" 
-            dangerouslySetInnerHTML={{ __html: content }}
-          />
+          {nodeInfo.node_type === 'content' ? (
+            // Display content node (section)
+            <RegulationContent 
+              content={content} 
+              nodeInfo={nodeInfo}
+            />
+          ) : (
+            // Display structure node with its children
+            <RegulationStructure 
+              nodeInfo={nodeInfo}
+              childNodes={childNodes} 
+            />
+          )}
         </TabsContent>
         
         <TabsContent value="history">
