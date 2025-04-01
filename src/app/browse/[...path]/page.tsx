@@ -13,23 +13,28 @@ async function fetchRegulationData(pathArray: string[]) {
   // e.g., ['title=4', 'chapter=I'] => 'title=4/chapter=I'
   const pathString = pathArray.join('/');
   
-  // For server component, we can use a relative URL
-  // Careful to not double-encode the path
-  const apiUrl = `/api/regulation?path=${pathString}`;
-  
-  const response = await fetch(apiUrl, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    cache: 'no-store', // Disable caching for now
-  });
+  try {
+    // Create a properly encoded URL - ensuring no double encoding happens
+    const apiUrl = `/api/regulation?path=${pathString}`;
+    console.log('Fetching from URL:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Disable caching for now
+    });
 
-  if (!response.ok) {
-    throw new Error(`Error fetching regulation data: ${response.statusText}`);
+    if (!response.ok) {
+      throw new Error(`Error fetching regulation data: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching regulation data:', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 export default async function Page({ params }: PageProps) {

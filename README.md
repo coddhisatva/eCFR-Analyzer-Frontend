@@ -1,36 +1,156 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# eCFR Analyzer Frontend
+
+A modern web application for browsing and analyzing the Electronic Code of Federal Regulations (eCFR).
+
+## Features
+
+- Browse the hierarchical structure of the Code of Federal Regulations
+- View regulation content with proper formatting
+- Navigation through titles, chapters, subchapters, parts, and sections
+- History tracking of regulation changes (coming soon)
+- Analytics and insights about regulation content (coming soon)
+
+## Technology Stack
+
+- Next.js 15
+- TypeScript
+- Tailwind CSS
+- React
+- ShadCN UI Components
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+ and npm/yarn
+- Backend API with regulation data
+
+### Installation
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/ecfr-frontend.git
+   cd ecfr-frontend
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+3. Run the development server:
+   ```
+   npm run dev
+   ```
+
+### Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000  # URL to your backend API
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Connecting to the Real Database
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The application is designed to work with a backend API that provides regulation data. To connect to your actual database:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Update the Navigation API
 
-## Learn More
+Edit `src/app/api/navigation/route.ts` to fetch real data from your backend:
 
-To learn more about Next.js, take a look at the following resources:
+```typescript
+// Replace this function with a real API call
+async function fetchRegulationNodes(): Promise<RegulationNode[]> {
+  try {
+    // Call your actual backend API
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/nodes`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch regulation nodes');
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching regulation nodes:', error);
+    return [];
+  }
+}
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. Update the Regulation Content API
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Edit `src/app/api/regulation/route.ts` to fetch real content from your backend:
 
-## Deploy on Vercel
+```typescript
+// Inside the GET function
+const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/regulation?path=${encodeURIComponent(path)}`);
+const data = await response.json();
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+return NextResponse.json({
+  nodeInfo: data.nodeInfo,
+  content: data.content,
+  childNodes: data.childNodes
+});
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 3. Backend API Requirements
+
+Your backend needs to provide the following endpoints:
+
+1. `/api/nodes` - Returns all regulation nodes for the navigation tree
+   ```json
+   [
+     {
+       "id": "title-1",
+       "citation": "Title 1",
+       "link": "/title=1",
+       "node_type": "structure",
+       "level_type": "title",
+       "number": "1",
+       "node_name": "General Provisions",
+       "parent": null
+     },
+     ...
+   ]
+   ```
+
+2. `/api/regulation?path=title=4/chapter=I` - Returns information about a specific regulation path
+   ```json
+   {
+     "nodeInfo": {
+       "id": "...",
+       "citation": "...",
+       "link": "...",
+       "node_type": "structure|content",
+       "level_type": "title|chapter|part|section",
+       "number": "...",
+       "node_name": "...",
+       "parent": "..."
+     },
+     "content": ["<p>HTML content...</p>", ...],
+     "childNodes": [...]
+   }
+   ```
+
+## Project Structure
+
+- `/src/app` - Next.js app router pages
+- `/src/components` - React components
+- `/src/types` - TypeScript type definitions
+- `/src/app/api` - API routes for fetching data
+  - `/navigation` - API route for fetching navigation tree
+  - `/regulation` - API route for fetching regulation content
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { RegulationNode } from '@/types/regulation';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Type for the navigation tree node structure
 interface NavNode {
@@ -11,97 +18,128 @@ interface NavNode {
   expanded?: boolean;
 }
 
-// Convert our database model to navigation tree structure
-function convertToNavTree(regulationNodes: any[]): NavNode[] {
-  // In a real implementation, this would transform actual database nodes into a tree
+// Function to build a tree from flat database nodes
+function buildNavigationTree(nodes: RegulationNode[]): NavNode[] {
+  if (!nodes || nodes.length === 0) {
+    return [];
+  }
+
+  // Create a map for quick lookup of nodes by their ID
+  const nodeMap = new Map();
   
-  // For now, we're using hardcoded mock data similar to the database structure
-  return [
-    {
-      id: "title-4",
-      type: "title",
-      number: "4",
-      name: "Accounts",
-      path: "/browse/title=4",
-      expanded: true,
-      children: [
-        {
-          id: "chapter-I",
-          type: "chapter",
-          number: "I",
-          name: "Government Accountability Office",
-          path: "/browse/title=4/chapter=I",
-          expanded: true,
-          children: [
-            {
-              id: "subchapter-A",
-              type: "subchapter",
-              number: "A",
-              name: "Personnel",
-              path: "/browse/title=4/chapter=I/subchapter=A",
-              expanded: false,
-            },
-            {
-              id: "subchapter-B",
-              type: "subchapter",
-              number: "B",
-              name: "General Procedures",
-              path: "/browse/title=4/chapter=I/subchapter=B",
-              expanded: true,
-              children: [
-                {
-                  id: "part-21",
-                  type: "part",
-                  number: "21",
-                  name: "Bid Protest Regulations",
-                  path: "/browse/title=4/chapter=I/subchapter=B/part=21",
-                  expanded: true,
-                  children: [
-                    {
-                      id: "section-21.1-3",
-                      type: "section",
-                      number: "21.1-3",
-                      name: "Purpose and Definitions",
-                      path: "/browse/title=4/chapter=I/subchapter=B/part=21/section=1-3",
-                    }
-                  ]
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "title-3",
-          type: "title",
-          number: "3",
-          name: "The President",
-          path: "/browse/title=3",
-          expanded: false,
-        },
-      ],
-    },
-    {
-      id: "title-5",
-      type: "title",
-      number: "5",
-      name: "Administrative Personnel",
-      path: "/browse/title=5",
-      expanded: false,
+  // First pass: Create NavNode objects for each regulation node
+  nodes.forEach(node => {
+    // Create a simplified version for the tree
+    const navNode: NavNode = {
+      id: node.id,
+      type: node.level_type,
+      number: node.number,
+      name: node.node_name,
+      path: `/browse${node.link}`,
+      expanded: false, // Default to collapsed
+      children: []
+    };
+    
+    nodeMap.set(node.id, navNode);
+  });
+  
+  // Second pass: Build the tree structure
+  const rootNodes: NavNode[] = [];
+  
+  nodes.forEach(node => {
+    const navNode = nodeMap.get(node.id);
+    
+    if (node.parent && nodeMap.has(node.parent)) {
+      // This node has a parent, add it as a child
+      const parentNavNode = nodeMap.get(node.parent);
+      if (!parentNavNode.children) {
+        parentNavNode.children = [];
+      }
+      parentNavNode.children.push(navNode);
+    } else {
+      // This is a root node (no parent or parent not in our dataset)
+      rootNodes.push(navNode);
     }
-  ];
+  });
+  
+  // Sort children by their level type and number
+  const sortNavNodes = (nodes: NavNode[]) => {
+    if (!nodes) return [];
+    
+    return nodes.sort((a, b) => {
+      // First sort by type if different
+      if (a.type !== b.type) {
+        // Define a type order for sorting
+        const typeOrder: Record<string, number> = {
+          'title': 1,
+          'chapter': 2,
+          'subchapter': 3,
+          'part': 4,
+          'section': 5
+        };
+        return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
+      }
+      
+      // Then sort by number if type is the same
+      return a.number.localeCompare(b.number, undefined, { numeric: true });
+    });
+  };
+  
+  // Sort the children recursively
+  const processSorting = (nodes: NavNode[]) => {
+    if (!nodes) return [];
+    
+    const sortedNodes = sortNavNodes(nodes);
+    
+    sortedNodes.forEach(node => {
+      if (node.children && node.children.length > 0) {
+        node.children = processSorting(node.children);
+      }
+    });
+    
+    return sortedNodes;
+  };
+  
+  return processSorting(rootNodes);
+}
+
+// Fetch regulation nodes directly from Supabase
+async function fetchRegulationNodes(): Promise<RegulationNode[]> {
+  try {
+    // Fetch all nodes from the nodes table
+    const { data, error } = await supabase
+      .from('nodes')
+      .select('*');
+    
+    if (error) {
+      throw error;
+    }
+    
+    console.log(`Fetched ${data.length} nodes from Supabase`);
+    return data as RegulationNode[];
+  } catch (error) {
+    console.error('Error fetching regulation nodes from Supabase:', error);
+    return [];
+  }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // In a real implementation, this would fetch data from your database
-    // and then convert it to the navigation tree structure
+    // Fetch nodes from Supabase
+    const nodes = await fetchRegulationNodes();
     
-    // For now, we'll just return the mock data
-    const navTree = convertToNavTree([]);
+    // Build the navigation tree
+    const navTree = buildNavigationTree(nodes);
+    
+    // Set initial expanded state for better UX
+    // Expand the first title by default
+    if (navTree.length > 0) {
+      navTree[0].expanded = true;
+    }
     
     return NextResponse.json(navTree);
   } catch (error) {
-    console.error('Error fetching navigation data:', error);
+    console.error('Error building navigation tree:', error);
     return NextResponse.json(
       { error: 'Failed to fetch navigation data' },
       { status: 500 }
