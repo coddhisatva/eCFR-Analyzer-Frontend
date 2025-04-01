@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
@@ -18,65 +18,38 @@ interface SidebarProps {
   initialData?: NavNode[];
 }
 
-// Placeholder data structure - will be replaced with real data
-const placeholderData: NavNode[] = [
-  {
-    id: "us/federal/ecfr/title=4",
-    type: "title",
-    number: "4",
-    name: "Accounts",
-    path: "/browse/title=4",
-    expanded: true,
-    children: [
-      {
-        id: "us/federal/ecfr/title=4/chapter=I",
-        type: "chapter",
-        number: "I",
-        name: "Gov Accountability",
-        path: "/browse/title=4/chapter=I",
-        expanded: true,
-        children: [
-          {
-            id: "us/federal/ecfr/title=4/chapter=I/subchapter=A",
-            type: "subchapter",
-            number: "A",
-            name: "Personnel",
-            path: "/browse/title=4/chapter=I/subchapter=A",
-            expanded: false,
-          },
-          {
-            id: "us/federal/ecfr/title=4/chapter=I/subchapter=B",
-            type: "subchapter",
-            number: "B",
-            name: "General",
-            path: "/browse/title=4/chapter=I/subchapter=B",
-            expanded: true,
-            children: [
-              {
-                id: "us/federal/ecfr/title=4/chapter=I/subchapter=B/section=21-29",
-                type: "section",
-                number: "21-29",
-                name: "Section 21-29",
-                path: "/browse/title=4/chapter=I/subchapter=B/section=21-29",
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "us/federal/ecfr/title=3",
-        type: "title",
-        number: "3",
-        name: "The President",
-        path: "/browse/title=3",
-        expanded: false,
-      },
-    ],
-  },
-];
+// Placeholder data - only used if API call fails
+const placeholderData: NavNode[] = [];
 
 export function Sidebar({ initialData = placeholderData }: SidebarProps) {
   const [navData, setNavData] = useState(initialData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch navigation data on component mount
+  useEffect(() => {
+    async function fetchNavigationData() {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/navigation');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch navigation data');
+        }
+        
+        const data = await response.json();
+        setNavData(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching navigation:', err);
+        setError('Failed to load navigation. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchNavigationData();
+  }, []);
 
   const toggleNode = (nodeId: string) => {
     const updateNodes = (nodes: NavNode[]): NavNode[] => {
@@ -118,7 +91,7 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
             className="flex-1 truncate"
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="font-semibold">{`${node.type === 'title' ? 'Title' : node.type === 'chapter' ? 'Chapter' : node.type === 'subchapter' ? 'Subchapter' : 'Section'} ${node.number}`}</span>
+            <span className="font-semibold">{`${node.type === 'title' ? 'Title' : node.type === 'chapter' ? 'Chapter' : node.type === 'subchapter' ? 'Subchapter' : node.type === 'part' ? 'Part' : 'Section'} ${node.number}`}</span>
             {node.name && `: ${node.name}`}
           </Link>
         </div>
@@ -138,7 +111,21 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
         Browse Regulations
       </div>
       <div className="p-2">
-        {navData.map((node) => renderNavNode(node))}
+        {isLoading ? (
+          <div className="p-4 text-center text-gray-500">
+            Loading navigation...
+          </div>
+        ) : error ? (
+          <div className="p-4 text-center text-red-500">
+            {error}
+          </div>
+        ) : navData.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">
+            No regulation data available
+          </div>
+        ) : (
+          navData.map((node) => renderNavNode(node))
+        )}
       </div>
     </div>
   );

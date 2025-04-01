@@ -14,7 +14,8 @@ async function fetchRegulationData(pathArray: string[]) {
   const pathString = pathArray.join('/');
   
   // For server component, we can use a relative URL
-  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || ''}/api/regulation?path=${encodeURIComponent(pathString)}`;
+  // Careful to not double-encode the path
+  const apiUrl = `/api/regulation?path=${pathString}`;
   
   const response = await fetch(apiUrl, {
     method: 'GET',

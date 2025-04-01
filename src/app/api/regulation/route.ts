@@ -8,12 +8,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const path = searchParams.get('path') || '';
     
-    // Sample data structure based on the user's database model
-    // In a real implementation, fetch this from a database based on the path
+    // Log the raw path for debugging
+    console.log('Received raw path:', path);
     
     // Parse path segments to determine what to return
     const pathSegments = path.split('/');
-    console.log('Processing request for path:', path);
+    console.log('Processing request for path segments:', pathSegments);
+    
+    // Sample data structure based on the user's database model
+    // In a real implementation, fetch this from a database based on the path
     
     // Mock data - simulating database response
     const mockNode = {
