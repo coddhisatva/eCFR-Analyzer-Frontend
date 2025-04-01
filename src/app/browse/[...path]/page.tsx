@@ -1,6 +1,3 @@
-Create `src/app/browse/[...path]/page.tsx`:
-
-```tsx
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface RegulationPageProps {
