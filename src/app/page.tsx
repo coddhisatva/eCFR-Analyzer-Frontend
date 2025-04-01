@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="max-w-4xl mx-auto">
@@ -9,12 +11,12 @@ export default function Home() {
           <p className="text-gray-600 mb-4">
             Navigate through titles, chapters, subchapters, and sections of the Electronic Code of Federal Regulations.
           </p>
-          <a 
+          <Link 
             href="/browse" 
             className="text-blue-600 hover:text-blue-800 font-medium"
           >
             Start browsing →
-          </a>
+          </Link>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">

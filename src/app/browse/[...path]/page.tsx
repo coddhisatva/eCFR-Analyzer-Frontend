@@ -8,7 +8,7 @@ interface RegulationPageProps {
 
 export default function RegulationPage({ params }: RegulationPageProps) {
   // This would be fetched from the database based on the path
-  const pathString = params.path.join("/");
+  // const pathString = params.path.join("/");
 
   // Mock data - would come from your database
   const title = {

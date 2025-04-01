@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, FileText, Hash, History, Link2, Zap } from "lucide-react";
+import { BarChart3, FileText, Hash, History, Link2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePathname } from "next/navigation";
 
