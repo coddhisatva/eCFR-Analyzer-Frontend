@@ -59,16 +59,18 @@ function buildNavigationTree(nodes: RegulationNode[]): NavNode[] {
   nodes.forEach(node => {
     if (!node.id || !nodeMap.has(node.id)) return;
     
-    // Look for nodes with "title=" in their ID path - these are the actual titles
-    if (node.id.includes('/title=') && !node.id.includes('/chapter=') && 
-        !node.id.includes('/part=') && !node.id.includes('/section=') && 
-        !node.id.includes('/subpart=') && !node.id.includes('/subchap=')) {
+    // Only add nodes that are actual CFR titles (not subtitles)
+    // We want paths like "us/federal/ecfr/title=##" but not "us/federal/ecfr/title=##/subtitle=X"
+    if (node.id.includes('/title=') && !node.id.includes('/subtitle=') && 
+        !node.id.includes('/chapter=') && !node.id.includes('/part=') && 
+        !node.id.includes('/section=') && !node.id.includes('/subpart=') && 
+        !node.id.includes('/subchap=')) {
       rootNodes.push(nodeMap.get(node.id));
       console.log(`Added title as root: ${node.number} - ${node.node_name} (${node.id})`);
     }
   });
   
-  console.log(`Found ${rootNodes.length} title nodes to use as roots`);
+  console.log(`Found ${rootNodes.length} main title nodes to use as roots`);
   
   // Now build child relationships for all non-root nodes
   nodes.forEach(node => {
