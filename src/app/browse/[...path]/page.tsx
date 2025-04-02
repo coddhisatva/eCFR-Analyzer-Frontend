@@ -1,145 +1,191 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import RegulationContent from "@/components/regulation/content";
-import RegulationStructure from "@/components/regulation/structure";
-import { RegulationPathParams } from "@/types/regulation";
+import { RegulationNode } from "@/types/regulation";
 
 type PageProps = {
-  params: Promise<RegulationPathParams>;
+  params: {
+    path: string[];
+  };
 };
 
-async function fetchRegulationData(pathArray: string[]) {
-  // Convert path array into a path string in the format expected by the API
-  // e.g., ['title=4', 'chapter=I'] => 'title=4/chapter=I'
+async function fetchNodeData(pathArray: string[]) {
   const pathString = pathArray.join('/');
   
   try {
     // For server-to-server API calls within the same app, we can use a relative URL
-    // with properly encoded parameters
     const params = new URLSearchParams();
     params.append('path', pathString);
     
-    const apiUrl = `/api/regulation?${params.toString()}`;
-    console.log('Fetching regulation data from:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
+    const response = await fetch(`http://localhost:3000/api/regulation?${params.toString()}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store'
     });
 
     if (!response.ok) {
-      // Handle HTTP errors
-      const errorText = await response.text();
-      let errorMessage;
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
-      } catch {
-        errorMessage = `HTTP error! status: ${response.status}, text: ${errorText.slice(0, 100)}`;
-      }
-      throw new Error(errorMessage);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     return response.json();
   } catch (error) {
-    console.error('Error fetching regulation data:', error);
+    console.error('Error fetching node data:', error);
     throw error;
   }
 }
 
-export default async function Page({ params }: PageProps) {
-  const { path } = await params;
+export default async function NodePage({ params }: PageProps) {
+  const { path } = params;
   const pathString = path.join("/");
-  console.log("Path:", pathString);
+  console.log("Viewing node at path:", pathString);
 
-  // Fetch the regulation data
-  const regulationData = await fetchRegulationData(path);
-  const { nodeInfo, content, childNodes } = regulationData;
+  // Fetch the node data
+  const nodeData = await fetchNodeData(path);
+  const { nodeInfo, content, childNodes } = nodeData;
 
   // Build breadcrumbs from path segments
   const breadcrumbs = path.map((segment, index) => {
-    const breadcrumbPath = '/' + path.slice(0, index + 1).join('/');
+    const breadcrumbPath = path.slice(0, index + 1).join('/');
     const [type, number] = segment.split('=');
     const label = `${type.charAt(0).toUpperCase() + type.slice(1)} ${number}`;
-    return { label, path: `/browse${breadcrumbPath}` };
+    return { label, path: `/browse/${breadcrumbPath}` };
   });
   
-  // Add a home breadcrumb at the beginning
+  // Add home breadcrumb at the beginning
   breadcrumbs.unshift({ label: 'Browse', path: '/browse' });
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto p-6">
       {/* Breadcrumb navigation */}
-      <div className="flex flex-wrap items-center mb-2 text-sm">
+      <nav className="flex items-center space-x-2 text-sm mb-6">
         {breadcrumbs.map((item, i) => (
           <div key={item.path} className="flex items-center">
-            {i > 0 && <span className="mx-2">›</span>}
+            {i > 0 && <span className="mx-2 text-gray-500">›</span>}
             <Link href={item.path} className="text-blue-600 hover:underline">
               {item.label}
             </Link>
           </div>
         ))}
+      </nav>
+
+      {/* Node header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">{nodeInfo.citation}</h1>
+        <p className="text-xl text-gray-600">{nodeInfo.node_name}</p>
       </div>
 
-      {/* Title */}
-      <h1 className="text-2xl font-bold mb-1">
-        {nodeInfo.node_name}
-      </h1>
-      <p className="text-gray-600 mb-6">{nodeInfo.citation}</p>
-
-      {/* Content tabs - content and history */}
-      <Tabs defaultValue="content" className="w-full">
+      <Tabs defaultValue="overview" className="w-full">
         <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="children">Children</TabsTrigger>
+          <TabsTrigger value="metrics">Metrics</TabsTrigger>
         </TabsList>
-        
+
+        {/* Overview Tab */}
+        <TabsContent value="overview">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Details</h2>
+              <dl className="space-y-2">
+                <div>
+                  <dt className="text-sm text-gray-500">Type</dt>
+                  <dd className="font-medium">{nodeInfo.level_type}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-gray-500">Number</dt>
+                  <dd className="font-medium">{nodeInfo.number}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-gray-500">Node Type</dt>
+                  <dd className="font-medium">{nodeInfo.node_type}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Quick Stats</h2>
+              <dl className="space-y-2">
+                <div>
+                  <dt className="text-sm text-gray-500">Child Nodes</dt>
+                  <dd className="font-medium">{childNodes.length}</dd>
+                </div>
+                {content && (
+                  <div>
+                    <dt className="text-sm text-gray-500">Content Length</dt>
+                    <dd className="font-medium">{content.length} chunks</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Content Tab */}
         <TabsContent value="content">
-          {nodeInfo.node_type === 'content' ? (
-            // Display content node (section)
-            <RegulationContent 
-              content={content} 
-              nodeInfo={nodeInfo}
-            />
+          {nodeInfo.node_type === 'content' && content ? (
+            <div className="prose prose-blue max-w-none">
+              {content.map((chunk: string, index: number) => (
+                <div 
+                  key={index}
+                  className="mb-4"
+                  dangerouslySetInnerHTML={{ __html: chunk }}
+                />
+              ))}
+            </div>
           ) : (
-            // Display structure node with its children
-            <RegulationStructure 
-              nodeInfo={nodeInfo}
-              childNodes={childNodes} 
-            />
+            <p className="text-gray-500 italic">This node does not contain direct content.</p>
           )}
         </TabsContent>
-        
-        <TabsContent value="history">
-          <div className="py-4">
-            <p className="text-gray-600">
-              Historical versions and amendments will be displayed here.
-            </p>
-            <div className="mt-4">
-              <h3 className="font-medium mb-2">Version History</h3>
-              <div className="border rounded-md">
-                <div className="grid grid-cols-3 p-3 border-b bg-gray-50 font-medium">
-                  <div>Date</div>
-                  <div>Change Type</div>
-                  <div>Description</div>
-                </div>
-                <div className="grid grid-cols-3 p-3 border-b">
-                  <div>Mar 12, 2023</div>
-                  <div>Amendment</div>
-                  <div>Updated definition in § 21.2(a)</div>
-                </div>
-                <div className="grid grid-cols-3 p-3 border-b">
-                  <div>Jan 5, 2022</div>
-                  <div>Revision</div>
-                  <div>Added clarity to purpose statement</div>
-                </div>
-                <div className="grid grid-cols-3 p-3">
-                  <div>Nov 20, 2020</div>
-                  <div>Initial</div>
-                  <div>Original publication</div>
+
+        {/* Children Tab */}
+        <TabsContent value="children">
+          {childNodes.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {childNodes.map((child: RegulationNode) => (
+                <Link
+                  key={child.id}
+                  href={`/browse/${child.link.replace(/^\//, '')}`}
+                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="font-medium">{child.citation}</div>
+                  <div className="text-sm text-gray-600 truncate">{child.node_name}</div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 italic">This node has no child nodes.</p>
+          )}
+        </TabsContent>
+
+        {/* Metrics Tab */}
+        <TabsContent value="metrics">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 border rounded-lg">
+                <div className="text-sm text-gray-500">Word Count</div>
+                <div className="text-2xl font-bold">
+                  {content?.reduce((acc: number, chunk: string) => 
+                    acc + chunk.split(/\s+/).length, 0
+                  ) || 0}
                 </div>
               </div>
+              
+              <div className="p-4 border rounded-lg">
+                <div className="text-sm text-gray-500">References</div>
+                <div className="text-2xl font-bold">--</div>
+              </div>
+
+              <div className="p-4 border rounded-lg">
+                <div className="text-sm text-gray-500">Last Updated</div>
+                <div className="text-2xl font-bold">--</div>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Additional Metrics</h3>
+              <p className="text-gray-500 italic">
+                More detailed metrics and analytics will be available here.
+              </p>
             </div>
           </div>
         </TabsContent>
