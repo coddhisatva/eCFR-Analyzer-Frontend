@@ -29,7 +29,7 @@ async function fetchRootNodes(): Promise<RegulationNode[]> {
     .from('nodes')
     .select('*')
     .eq('depth', 0)
-    .order('number', { ascending: true });
+    .order('top_level_title', { ascending: true });
 
   if (error) {
     console.error('Error fetching root nodes:', error);
@@ -44,7 +44,7 @@ async function fetchChildren(parentId: string): Promise<RegulationNode[]> {
     .from('nodes')
     .select('*')
     .eq('parent', parentId)
-    .order('number', { ascending: true });
+    .order('display_order', { ascending: true });
 
   if (error) {
     console.error(`Error fetching children of ${parentId}:`, error);
