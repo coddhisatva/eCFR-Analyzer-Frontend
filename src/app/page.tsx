@@ -1,61 +1,42 @@
-import Link from "next/link";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Welcome to eCFR Analyzer</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-3">Browse Regulations</h2>
-          <p className="text-gray-600 mb-4">
-            Navigate through titles, chapters, subchapters, and sections of the Electronic Code of Federal Regulations.
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4">
+      <div className="w-full max-w-3xl space-y-8 -mt-32">
+        {/* Hero Text */}
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold tracking-tight">
+            Search eCFR Documentation
+          </h1>
+          <p className="text-lg text-gray-600">
+            Search through the Electronic Code of Federal Regulations
           </p>
-          <Link 
-            href="/browse" 
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Start browsing →
-          </Link>
         </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-3">Search Regulations</h2>
-          <p className="text-gray-600 mb-4">
-            Search through the full text of the eCFR to find specific regulations and requirements.
-          </p>
-          <a 
-            href="/search" 
-            className="text-blue-600 hover:text-blue-800 font-medium"
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Input
+            type="search"
+            placeholder="Example: requirements for financial institutions..."
+            className="w-full h-12 pl-4 pr-12 text-lg"
+          />
+          <Button
+            size="icon"
+            className="absolute right-2 top-1/2 -translate-y-1/2"
           >
-            Search eCFR →
-          </a>
+            <Search className="h-5 w-5" />
+          </Button>
         </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-3">Analytics</h2>
-          <p className="text-gray-600 mb-4">
-            Explore statistics, relationships, and insights into regulatory content.
-          </p>
-          <a 
-            href="/analytics" 
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            View analytics →
-          </a>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-3">AI-Assisted Chat</h2>
-          <p className="text-gray-600 mb-4">
-            Ask questions about regulations and get AI-powered answers based on eCFR content.
-          </p>
-          <a 
-            href="/chat" 
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Start chatting →
-          </a>
+
+        {/* Filter Panel */}
+        <div className="border rounded-lg p-4 bg-white shadow-sm">
+          <h2 className="font-medium mb-4">Filters</h2>
+          <div className="text-sm text-gray-500">
+            Filter options coming soon...
+          </div>
         </div>
       </div>
     </div>
