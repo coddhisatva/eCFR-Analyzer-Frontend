@@ -49,23 +49,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use the GIN index on content_tsvector for primary search
+    // First search just the chunks using the GIN index
     const { data: chunks, error: searchError } = await supabase
       .from('content_chunks')
-      .select(`
-        id,
-        content,
-        chunk_number,
-        section_id,
-        nodes!inner (
-          id,
-          level_type,
-          number,
-          node_name,
-          citation,
-          parent
-        )
-      `)
+      .select('id, content, chunk_number, section_id')
       .textSearch('content_tsvector', query, {
         type: 'websearch',
         config: 'english'
@@ -80,24 +67,52 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!chunks || chunks.length === 0) {
+      return NextResponse.json({
+        results: [],
+        total: 0,
+        query
+      });
+    }
+
+    // Get node information for the chunks we found
+    const sectionIds = chunks.map(chunk => chunk.section_id);
+    const { data: nodes, error: nodesError } = await supabase
+      .from('nodes')
+      .select('id, level_type, number, node_name, citation, parent')
+      .in('id', sectionIds);
+
+    if (nodesError) {
+      console.error('Error fetching nodes:', nodesError);
+      return NextResponse.json(
+        { error: 'Failed to fetch node information', details: nodesError.message },
+        { status: 500 }
+      );
+    }
+
+    // Create a map of section_id to node for quick lookup
+    const nodeMap = new Map(nodes?.map(node => [node.id, node]) || []);
+
     // Transform results
-    const results: SearchResult[] = (chunks || []).map(chunk => {
-      const typedChunk = chunk as unknown as SearchChunk;
+    const results: SearchResult[] = chunks.map(chunk => {
+      const node = nodeMap.get(chunk.section_id);
+      if (!node) return null;
+
       return {
-        id: typedChunk.id,
-        content: typedChunk.content,
-        chunkNumber: typedChunk.chunk_number,
-        rank: 0, // All results are ranked equally for now
+        id: chunk.id,
+        content: chunk.content,
+        chunkNumber: chunk.chunk_number,
+        rank: 0,
         section: {
-          id: typedChunk.nodes.id,
-          levelType: typedChunk.nodes.level_type,
-          number: typedChunk.nodes.number,
-          name: typedChunk.nodes.node_name,
-          citation: typedChunk.nodes.citation,
-          parent: typedChunk.nodes.parent
+          id: node.id,
+          levelType: node.level_type,
+          number: node.number,
+          name: node.node_name,
+          citation: node.citation,
+          parent: node.parent
         }
       };
-    });
+    }).filter((result): result is SearchResult => result !== null);
 
     return NextResponse.json({
       results,
