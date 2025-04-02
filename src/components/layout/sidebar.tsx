@@ -13,6 +13,7 @@ type NavNode = {
   path: string;
   expanded?: boolean;
   isLoading?: boolean;
+  preview?: string;
 };
 
 interface SidebarProps {
@@ -150,7 +151,7 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
   };
 
   const renderNavNode = (node: NavNode, depth = 0) => {
-    const hasChildren = node.children !== undefined;
+    const hasChildren = node.children !== undefined && node.type !== 'section';
     const isFetchingChildren = node.isLoading;
     const paddingLeft = `${(depth + 1) * 0.75}rem`;
     const nodeLabel = formatNodeLabel(node);
@@ -175,11 +176,17 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
           )}
           <Link 
             href={node.path}
-            className="flex-1 truncate"
+            className="flex-1"
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="font-semibold">{nodeLabel}</span>
-            {node.name && `: ${node.name}`}
+            <div className="font-semibold">{nodeLabel}</div>
+            {node.type === 'section' && node.preview ? (
+              <div className="text-sm text-gray-600 mt-1 line-clamp-2">
+                {node.preview.replace(/<[^>]*>/g, '')}
+              </div>
+            ) : node.name ? (
+              <div className="text-sm text-gray-600 truncate">{node.name}</div>
+            ) : null}
           </Link>
         </div>
 

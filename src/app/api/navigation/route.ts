@@ -17,6 +17,7 @@ interface NavNode {
   path: string;
   expanded?: boolean;
   children?: NavNode[];
+  preview?: string;
 }
 
 // ----------------------
@@ -50,7 +51,25 @@ async function fetchChildren(parentId: string): Promise<RegulationNode[]> {
     console.error(`Error fetching children of ${parentId}:`, error);
     return [];
   }
-  return data as RegulationNode[];
+
+  // For section nodes, fetch the first content chunk
+  const nodes = data as RegulationNode[];
+  for (let node of nodes) {
+    if (node.level_type === 'section') {
+      const { data: contentChunks } = await supabase
+        .from('content_chunks')
+        .select('content')
+        .eq('section_id', node.id)
+        .order('chunk_number', { ascending: true })
+        .limit(1);
+      
+      if (contentChunks && contentChunks.length > 0) {
+        node.preview = contentChunks[0].content;
+      }
+    }
+  }
+
+  return nodes;
 }
 
 // ----------------------
@@ -70,7 +89,8 @@ function toNavNode(node: RegulationNode): NavNode {
     parent: node.parent || undefined,
     path: `/browse${browsePath}`,
     expanded: false,
-    children: []
+    children: [],
+    preview: node.preview
   };
 }
 

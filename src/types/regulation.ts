@@ -10,6 +10,7 @@ export interface RegulationNode {
   node_name: string;
   parent?: string;
   metadata?: Record<string, any>;
+  preview?: string;
 }
 
 export interface ContentChunk {
