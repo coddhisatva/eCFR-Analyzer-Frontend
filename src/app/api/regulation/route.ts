@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
     console.log('Processing regulation request for path:', path);
 
     // Convert the path to a node ID format
-    // If path is like 'title=4/chapter=I', convert to 'us/federal/ecfr/title=4/chapter=I'
     const nodeId = path.startsWith('us/federal/ecfr/') ? path : `us/federal/ecfr/${path}`;
     console.log('Looking up node with ID:', nodeId);
 
@@ -47,7 +46,11 @@ export async function GET(request: NextRequest) {
       .eq('id', nodeId);
     
     if (nodeError) {
-      throw new Error(`Error fetching node: ${nodeError.message}`);
+      console.error('Error in direct node fetch:', nodeError);
+      return NextResponse.json(
+        { error: `Database error: ${nodeError.message}` },
+        { status: 500 }
+      );
     }
     
     // If node not found directly, try to parse the path
@@ -66,6 +69,7 @@ export async function GET(request: NextRequest) {
       
       console.log(`Fallback: Looking up ${levelType} with number ${number}`);
 
+      // Try to find the node by level type and number
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('nodes')
         .select('*')
@@ -73,7 +77,11 @@ export async function GET(request: NextRequest) {
         .eq('number', number);
       
       if (fallbackError) {
-        throw new Error(`Error in fallback node fetch: ${fallbackError.message}`);
+        console.error('Error in fallback node fetch:', fallbackError);
+        return NextResponse.json(
+          { error: `Database error: ${fallbackError.message}` },
+          { status: 500 }
+        );
       }
       
       if (!fallbackData || fallbackData.length === 0) {
@@ -88,6 +96,7 @@ export async function GET(request: NextRequest) {
     
     // Get the first matching node
     const nodeInfo = nodeData[0];
+    console.log('Found node:', nodeInfo);
     
     // If this is a content node, fetch the content chunks
     let content: string[] = [];
@@ -99,7 +108,11 @@ export async function GET(request: NextRequest) {
         .order('chunk_index', { ascending: true });
       
       if (contentError) {
-        throw new Error(`Error fetching content: ${contentError.message}`);
+        console.error('Error fetching content:', contentError);
+        return NextResponse.json(
+          { error: `Error fetching content: ${contentError.message}` },
+          { status: 500 }
+        );
       }
       
       // Extract content from chunks
@@ -112,10 +125,15 @@ export async function GET(request: NextRequest) {
       const { data: children, error: childrenError } = await supabase
         .from('nodes')
         .select('*')
-        .eq('parent', nodeInfo.id);
+        .eq('parent', nodeInfo.id)
+        .order('display_order', { ascending: true });
       
       if (childrenError) {
-        throw new Error(`Error fetching child nodes: ${childrenError.message}`);
+        console.error('Error fetching child nodes:', childrenError);
+        return NextResponse.json(
+          { error: `Error fetching child nodes: ${childrenError.message}` },
+          { status: 500 }
+        );
       }
       
       childNodes = children || [];

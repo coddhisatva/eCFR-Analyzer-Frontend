@@ -12,21 +12,25 @@ async function fetchNodeData(pathArray: string[]) {
   const pathString = pathArray.join('/');
   
   try {
-    // For server-to-server API calls within the same app, we can use a relative URL
+    // For server-side API calls, we need the full URL
     const params = new URLSearchParams();
     params.append('path', pathString);
     
-    const response = await fetch(`http://localhost:3000/api/regulation?${params.toString()}`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/regulation?${params.toString()}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store'
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Get the error details from the response
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('Received node data:', data);  // Debug log
+    return data;
   } catch (error) {
     console.error('Error fetching node data:', error);
     throw error;
