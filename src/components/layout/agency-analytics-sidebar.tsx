@@ -30,13 +30,14 @@ export function AgencyAnalyticsSidebar() {
       try {
         const response = await fetch('/api/agencies/analytics');
         if (!response.ok) {
-          throw new Error('Failed to fetch analytics');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch analytics');
         }
         const data = await response.json();
         setAnalytics(data);
       } catch (err) {
         console.error('Error fetching analytics:', err);
-        setError('Failed to load analytics');
+        setError((err as Error).message || 'Failed to load analytics');
       }
     }
 
@@ -45,8 +46,9 @@ export function AgencyAnalyticsSidebar() {
 
   if (error) {
     return (
-      <div className="p-4 text-center text-red-500">
-        {error}
+      <div className="p-4 border border-red-200 rounded-md bg-red-50">
+        <div className="text-red-600 font-medium mb-1">Error</div>
+        <div className="text-red-500 text-sm">{error}</div>
       </div>
     );
   }
