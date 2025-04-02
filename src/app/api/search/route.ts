@@ -49,87 +49,91 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // First search just the chunks using ilike
-    console.log('Searching for query:', query);
-    const { data: chunks, error: searchError, count } = await supabase
-      .from('content_chunks')
-      .select('id, content, chunk_number, section_id', { count: 'exact' })
-      .ilike('content', `%${query}%`)
-      .limit(50);
-
-    console.log('Search results:', {
-      chunksFound: chunks?.length || 0,
-      totalCount: count,
-      error: searchError,
-      firstChunk: chunks?.[0]
-    });
-
-    // Also try a direct query to verify data exists
-    const { data: sampleChunks, error: sampleError } = await supabase
-      .from('content_chunks')
-      .select('id, content')
-      .limit(1);
-
-    console.log('Sample chunk check:', {
-      hasData: !!sampleChunks?.length,
-      sampleError
-    });
-
-    if (searchError) {
-      console.error('Search error:', searchError);
-      return NextResponse.json(
-        { error: 'Failed to perform search', details: searchError.message },
-        { status: 500 }
-      );
-    }
-
-    if (!chunks || chunks.length === 0) {
-      console.log('No chunks found for query:', query);
-      return NextResponse.json({
-        results: [],
-        total: 0,
-        query
-      });
-    }
-
-    // Get node information for the chunks we found
-    const sectionIds = chunks.map(chunk => chunk.section_id);
-    const { data: nodes, error: nodesError } = await supabase
+    // First try exact section number match
+    const { data: exactMatches, error: exactError } = await supabase
       .from('nodes')
-      .select('id, level_type, number, node_name, citation, parent')
-      .in('id', sectionIds);
+      .select(`
+        id,
+        level_type,
+        number,
+        node_name,
+        citation,
+        parent,
+        content_chunks!inner (
+          id,
+          content,
+          chunk_number
+        )
+      `)
+      .eq('number', query)
+      .limit(5);
 
-    if (nodesError) {
-      console.error('Error fetching nodes:', nodesError);
+    if (exactError) {
+      console.error('Exact match search error:', exactError);
+    }
+
+    // Then do simple content search
+    const { data: contentMatches, error: contentError } = await supabase
+      .from('content_chunks')
+      .select(`
+        id,
+        content,
+        chunk_number,
+        section_id,
+        nodes!inner (
+          id,
+          level_type,
+          number,
+          node_name,
+          citation,
+          parent
+        )
+      `)
+      .ilike('content', `%${query}%`)
+      .limit(5);
+
+    if (contentError) {
+      console.error('Content search error:', contentError);
       return NextResponse.json(
-        { error: 'Failed to fetch node information', details: nodesError.message },
+        { error: 'Failed to perform search', details: contentError.message },
         { status: 500 }
       );
     }
 
-    // Create a map of section_id to node for quick lookup
-    const nodeMap = new Map(nodes?.map(node => [node.id, node]) || []);
+    // Combine results
+    const allChunks = [
+      ...(exactMatches?.flatMap(node => node.content_chunks) || []),
+      ...(contentMatches || [])
+    ];
+
+    // Remove duplicates
+    const uniqueChunks = Array.from(
+      new Map(allChunks.map(chunk => [chunk.id, chunk])).values()
+    );
 
     // Transform results
-    const results: SearchResult[] = chunks.map(chunk => {
-      const node = nodeMap.get(chunk.section_id);
-      if (!node) return null;
-
+    const results: SearchResult[] = uniqueChunks.map(chunk => {
+      const typedChunk = chunk as unknown as SearchChunk;
       return {
-        id: chunk.id,
-        content: chunk.content,
-        chunkNumber: chunk.chunk_number,
-        rank: 0,
+        id: typedChunk.id,
+        content: typedChunk.content,
+        chunkNumber: typedChunk.chunk_number,
+        rank: exactMatches?.some(node => 
+          node.content_chunks.some(c => c.id === typedChunk.id)
+        ) ? 1 : 0,
         section: {
-          id: node.id,
-          levelType: node.level_type,
-          number: node.number,
-          name: node.node_name,
-          citation: node.citation,
-          parent: node.parent
+          id: typedChunk.nodes.id,
+          levelType: typedChunk.nodes.level_type,
+          number: typedChunk.nodes.number,
+          name: typedChunk.nodes.node_name,
+          citation: typedChunk.nodes.citation,
+          parent: typedChunk.nodes.parent
         }
       };
-    }).filter((result): result is SearchResult => result !== null);
+    });
+
+    // Sort by rank (exact matches first)
+    results.sort((a, b) => b.rank - a.rank);
 
     return NextResponse.json({
       results,
