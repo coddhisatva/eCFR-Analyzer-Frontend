@@ -5,9 +5,9 @@ import { RegulationNode } from '@/types/regulation';
 // Interface for content chunks from the database
 interface ContentChunk {
   id: string;
-  node_id: string;
+  section_id: string;
   content: string;
-  chunk_index: number;
+  chunk_number: number;
 }
 
 // Initialize Supabase client
@@ -32,12 +32,8 @@ export async function GET(request: NextRequest) {
     // Ensure path is properly decoded
     const path = decodeURIComponent(encodedPath);
     
-    // Log the request for debugging
-    console.log('Processing regulation request for path:', path);
-
     // Convert the path to a node ID format
     const nodeId = path.startsWith('us/federal/ecfr/') ? path : `us/federal/ecfr/${path}`;
-    console.log('Looking up node with ID:', nodeId);
 
     // First, try to get the node directly by ID
     let { data: nodeData, error: nodeError } = await supabase
@@ -46,7 +42,6 @@ export async function GET(request: NextRequest) {
       .eq('id', nodeId);
     
     if (nodeError) {
-      console.error('Error in direct node fetch:', nodeError);
       return NextResponse.json(
         { error: `Database error: ${nodeError.message}` },
         { status: 500 }
@@ -66,8 +61,6 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         );
       }
-      
-      console.log(`Fallback: Looking up ${levelType} with number ${number}`);
 
       // Try to find the node by level type and number
       const { data: fallbackData, error: fallbackError } = await supabase
@@ -77,7 +70,6 @@ export async function GET(request: NextRequest) {
         .eq('number', number);
       
       if (fallbackError) {
-        console.error('Error in fallback node fetch:', fallbackError);
         return NextResponse.json(
           { error: `Database error: ${fallbackError.message}` },
           { status: 500 }
@@ -96,7 +88,6 @@ export async function GET(request: NextRequest) {
     
     // Get the first matching node
     const nodeInfo = nodeData[0];
-    console.log('Found node:', nodeInfo);
     
     // If this is a content node, fetch the content chunks
     let content: string[] = [];
@@ -108,7 +99,6 @@ export async function GET(request: NextRequest) {
         .order('chunk_number', { ascending: true });
       
       if (contentError) {
-        console.error('Error fetching content:', contentError);
         return NextResponse.json(
           { error: `Error fetching content: ${contentError.message}` },
           { status: 500 }
@@ -129,7 +119,6 @@ export async function GET(request: NextRequest) {
         .order('display_order', { ascending: true });
       
       if (childrenError) {
-        console.error('Error fetching child nodes:', childrenError);
         return NextResponse.json(
           { error: `Error fetching child nodes: ${childrenError.message}` },
           { status: 500 }
@@ -147,7 +136,6 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error fetching regulation data:', error);
     return NextResponse.json(
       { error: 'Failed to fetch regulation data', details: (error as Error).message },
       { status: 500 }

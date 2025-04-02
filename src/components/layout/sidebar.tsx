@@ -73,6 +73,10 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
       });
 
       const response = await fetch(`/api/navigation?parent=${nodeId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch children');
+      }
+      
       const newChildren = await response.json();
       
       // Update the navData with the new children
@@ -91,7 +95,7 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
         return updateNodes(prevData);
       });
     } catch (err) {
-      console.error('Error loading deeper levels:', err);
+      setError(`Failed to load navigation items: ${(err as Error).message}`);
       // Reset loading state on error
       setNavData(prevData => {
         const updateNodes = (nodes: NavNode[]): NavNode[] => {

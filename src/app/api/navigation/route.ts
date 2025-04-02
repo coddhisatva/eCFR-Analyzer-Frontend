@@ -33,8 +33,7 @@ async function fetchRootNodes(): Promise<RegulationNode[]> {
     .order('top_level_title', { ascending: true });
 
   if (error) {
-    console.error('Error fetching root nodes:', error);
-    return [];
+    throw new Error(`Failed to fetch root nodes: ${error.message}`);
   }
   return data as RegulationNode[];
 }
@@ -48,8 +47,7 @@ async function fetchChildren(parentId: string): Promise<RegulationNode[]> {
     .order('display_order', { ascending: true });
 
   if (error) {
-    console.error(`Error fetching children of ${parentId}:`, error);
-    return [];
+    throw new Error(`Failed to fetch children of ${parentId}: ${error.message}`);
   }
 
   // For section nodes, fetch the first content chunk
@@ -98,13 +96,12 @@ function toNavNode(node: RegulationNode): NavNode {
 // API Handler
 // ----------------------
 
-// Handles initial load: returns root nodes (depth = 0) + optionally preload depth = 1
 export async function GET(request: NextRequest) {
-  const url = new URL(request.url);
-  const levels = url.searchParams.get('levels') || '0,1'; // Default to 0,1 if not specified
-  const parentId = url.searchParams.get('parent');
-
   try {
+    const url = new URL(request.url);
+    const levels = url.searchParams.get('levels') || '0,1';
+    const parentId = url.searchParams.get('parent');
+
     // If parentId is specified, fetch children of that parent
     if (parentId) {
       const children = await fetchChildren(parentId);
@@ -126,9 +123,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(navNodes);
 
   } catch (error) {
-    console.error('Error building navigation tree:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch navigation data' },
+      { error: 'Failed to fetch navigation data', details: (error as Error).message },
       { status: 500 }
     );
   }
