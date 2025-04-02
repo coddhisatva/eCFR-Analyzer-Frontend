@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 
 type NavNode = {
   id: string;
@@ -12,6 +12,7 @@ type NavNode = {
   children?: NavNode[];
   path: string;
   expanded?: boolean;
+  isLoading?: boolean;
 };
 
 interface SidebarProps {
@@ -26,12 +27,12 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch navigation data on component mount
+  // Initial load - just get depth 0 and 1
   useEffect(() => {
-    async function fetchNavigationData() {
+    async function fetchInitialData() {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/navigation');
+        const response = await fetch('/api/navigation?levels=0,1');
         
         if (!response.ok) {
           throw new Error('Failed to fetch navigation data');
@@ -48,14 +49,76 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
       }
     }
     
-    fetchNavigationData();
+    fetchInitialData();
   }, []);
+
+  // Function to load deeper levels when a node is expanded
+  const loadDeeperLevels = async (nodeId: string) => {
+    try {
+      // Set loading state for this node
+      setNavData(prevData => {
+        const updateNodes = (nodes: NavNode[]): NavNode[] => {
+          return nodes.map(node => {
+            if (node.id === nodeId) {
+              return { ...node, isLoading: true };
+            }
+            if (node.children) {
+              return { ...node, children: updateNodes(node.children) };
+            }
+            return node;
+          });
+        };
+        return updateNodes(prevData);
+      });
+
+      const response = await fetch(`/api/navigation?parent=${nodeId}`);
+      const newChildren = await response.json();
+      
+      // Update the navData with the new children
+      setNavData(prevData => {
+        const updateNodes = (nodes: NavNode[]): NavNode[] => {
+          return nodes.map(node => {
+            if (node.id === nodeId) {
+              return { ...node, children: newChildren, isLoading: false };
+            }
+            if (node.children) {
+              return { ...node, children: updateNodes(node.children) };
+            }
+            return node;
+          });
+        };
+        return updateNodes(prevData);
+      });
+    } catch (err) {
+      console.error('Error loading deeper levels:', err);
+      // Reset loading state on error
+      setNavData(prevData => {
+        const updateNodes = (nodes: NavNode[]): NavNode[] => {
+          return nodes.map(node => {
+            if (node.id === nodeId) {
+              return { ...node, isLoading: false };
+            }
+            if (node.children) {
+              return { ...node, children: updateNodes(node.children) };
+            }
+            return node;
+          });
+        };
+        return updateNodes(prevData);
+      });
+    }
+  };
 
   const toggleNode = (nodeId: string) => {
     const updateNodes = (nodes: NavNode[]): NavNode[] => {
       return nodes.map((node) => {
         if (node.id === nodeId) {
-          return { ...node, expanded: !node.expanded };
+          const newExpanded = !node.expanded;
+          if (newExpanded && (!node.children || node.children.length === 0)) {
+            // If expanding and no children loaded yet, load them
+            loadDeeperLevels(nodeId);
+          }
+          return { ...node, expanded: newExpanded };
         }
         if (node.children) {
           return { ...node, children: updateNodes(node.children) };
@@ -87,7 +150,8 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
   };
 
   const renderNavNode = (node: NavNode, depth = 0) => {
-    const hasChildren = !!node.children?.length;
+    const hasChildren = node.children !== undefined;
+    const isFetchingChildren = node.isLoading;
     const paddingLeft = `${(depth + 1) * 0.75}rem`;
     const nodeLabel = formatNodeLabel(node);
 
@@ -100,10 +164,13 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
         >
           {hasChildren && (
             <span className="mr-1">
-              {node.expanded ? 
-                <ChevronDown className="h-4 w-4" /> : 
+              {isFetchingChildren ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : node.expanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
                 <ChevronRight className="h-4 w-4" />
-              }
+              )}
             </span>
           )}
           <Link 

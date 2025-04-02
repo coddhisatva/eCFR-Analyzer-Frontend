@@ -80,20 +80,27 @@ function toNavNode(node: RegulationNode): NavNode {
 
 // Handles initial load: returns root nodes (depth = 0) + optionally preload depth = 1
 export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const levels = url.searchParams.get('levels') || '0,1'; // Default to 0,1 if not specified
+  const parentId = url.searchParams.get('parent');
+
   try {
+    // If parentId is specified, fetch children of that parent
+    if (parentId) {
+      const children = await fetchChildren(parentId);
+      return NextResponse.json(children.map(toNavNode));
+    }
+
     // Load all depth=0 nodes (titles)
     const rootNodes = await fetchRootNodes();
     const navNodes = rootNodes.map(toNavNode);
 
-    // Optional: Preload depth=1 nodes (direct children of titles)
-    for (const navNode of navNodes) {
-      const children = await fetchChildren(navNode.id);
-      navNode.children = children.map(toNavNode);
-    }
-
-    // Expand first node by default (optional UX)
-    if (navNodes.length > 0) {
-      navNodes[0].expanded = true;
+    // Only fetch depth=1 if requested
+    if (levels.includes('1')) {
+      for (const navNode of navNodes) {
+        const children = await fetchChildren(navNode.id);
+        navNode.children = children.map(toNavNode);
+      }
     }
 
     return NextResponse.json(navNodes);
