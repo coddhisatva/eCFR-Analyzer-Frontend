@@ -86,26 +86,42 @@ export default async function NodePage({ params }: PageProps) {
       </nav>
 
       {/* Node header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{nodeInfo.citation}</h1>
-        <p className="text-xl text-gray-600">{nodeInfo.node_name}</p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">{nodeInfo.citation}</h1>
+          <p className="text-xl text-gray-600">{nodeInfo.node_name}</p>
+        </div>
+        {nodeInfo.link && (
+          <a 
+            href={nodeInfo.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline flex items-center"
+          >
+            View on eCFR
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        )}
       </div>
 
       {/* Main content area */}
       <div className="space-y-8">
         {/* Metrics row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 border rounded-lg">
-            <div className="text-sm text-gray-500">Word Count</div>
-            <div className="text-2xl font-bold">{wordCount}</div>
-          </div>
-          
-          {nodeInfo.metadata?.num_corrections !== undefined && (
-            <div className="p-4 border rounded-lg">
-              <div className="text-sm text-gray-500">Historical Changes</div>
-              <div className="text-2xl font-bold">{nodeInfo.metadata.num_corrections}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="p-4 border rounded-lg col-span-2 grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-sm text-gray-500">Word Count</div>
+              <div className="text-2xl font-bold">{wordCount}</div>
             </div>
-          )}
+            {nodeInfo.metadata?.num_corrections !== undefined && (
+              <div>
+                <div className="text-sm text-gray-500">Historical Changes</div>
+                <div className="text-2xl font-bold">{nodeInfo.metadata.num_corrections}</div>
+              </div>
+            )}
+          </div>
 
           {nodeInfo.metadata?.source_url && (
             <div className="p-4 border rounded-lg">
@@ -145,16 +161,22 @@ export default async function NodePage({ params }: PageProps) {
               Child Nodes <span className="text-gray-500 text-lg">({childNodes.length})</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {childNodes.map((child: RegulationNode) => (
-                <Link
-                  key={child.id}
-                  href={`/browse/${child.link.replace(/^\//, '')}`}
-                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="font-medium">{child.citation}</div>
-                  <div className="text-sm text-gray-600 truncate">{child.node_name}</div>
-                </Link>
-              ))}
+              {childNodes.map((child: RegulationNode) => {
+                // Convert full URL or path to our format
+                const pathSegment = `${child.level_type}=${child.number}`;
+                const childPath = path.length > 0 ? `${path.join('/')}/${pathSegment}` : pathSegment;
+                
+                return (
+                  <Link
+                    key={child.id}
+                    href={`/browse/${childPath}`}
+                    className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="font-medium">{child.citation}</div>
+                    <div className="text-sm text-gray-600 truncate">{child.node_name}</div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
