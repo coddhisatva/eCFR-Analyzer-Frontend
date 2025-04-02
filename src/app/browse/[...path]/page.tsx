@@ -49,7 +49,7 @@ export default async function NodePage({ params }: PageProps) {
   // Build breadcrumbs from path segments
   const breadcrumbs = path.map((segment, index) => {
     const breadcrumbPath = path.slice(0, index + 1).join('/');
-    const [type, number] = segment.split('=');
+    const [type, number] = decodeURIComponent(segment).split('=');
     const label = type === 'title' ? `Title ${number}` :
                  type === 'subtitle' ? `Subtitle ${number}` :
                  type === 'chapter' ? `Chapter ${number}` :
@@ -57,7 +57,10 @@ export default async function NodePage({ params }: PageProps) {
                  type === 'part' ? `Part ${number}` :
                  type === 'section' ? `Section ${number}` :
                  `${type} ${number}`;
-    return { label, path: `/browse/${breadcrumbPath}` };
+    return { 
+      label, 
+      path: `/browse/${breadcrumbPath}`
+    };
   });
   
   // Add home breadcrumb at the beginning
@@ -97,22 +100,26 @@ export default async function NodePage({ params }: PageProps) {
             <div className="text-2xl font-bold">{wordCount}</div>
           </div>
           
-          <div className="p-4 border rounded-lg">
-            <div className="text-sm text-gray-500">Historical Changes</div>
-            <div className="text-2xl font-bold">{nodeInfo.metadata?.num_corrections || 0}</div>
-          </div>
+          {nodeInfo.metadata?.num_corrections !== undefined && (
+            <div className="p-4 border rounded-lg">
+              <div className="text-sm text-gray-500">Historical Changes</div>
+              <div className="text-2xl font-bold">{nodeInfo.metadata.num_corrections}</div>
+            </div>
+          )}
 
-          <div className="p-4 border rounded-lg">
-            <div className="text-sm text-gray-500">Original Source</div>
-            <a 
-              href={nodeInfo.metadata?.original_url || '#'} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline truncate block"
-            >
-              View Source
-            </a>
-          </div>
+          {nodeInfo.metadata?.source_url && (
+            <div className="p-4 border rounded-lg">
+              <div className="text-sm text-gray-500">Original Source</div>
+              <a 
+                href={nodeInfo.metadata.source_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline truncate block"
+              >
+                View Source
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Content section */}
