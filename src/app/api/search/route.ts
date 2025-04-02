@@ -49,15 +49,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // First search just the chunks using the GIN index
-    const { data: chunks, error: searchError } = await supabase
+    // First search just the chunks using ilike
+    console.log('Searching for query:', query);
+    const { data: chunks, error: searchError, count } = await supabase
       .from('content_chunks')
-      .select('id, content, chunk_number, section_id')
-      .textSearch('content_tsvector', query, {
-        type: 'websearch',
-        config: 'english'
-      })
+      .select('id, content, chunk_number, section_id', { count: 'exact' })
+      .ilike('content', `%${query}%`)
       .limit(50);
+
+    console.log('Search results:', {
+      chunksFound: chunks?.length || 0,
+      totalCount: count,
+      error: searchError,
+      firstChunk: chunks?.[0]
+    });
+
+    // Also try a direct query to verify data exists
+    const { data: sampleChunks, error: sampleError } = await supabase
+      .from('content_chunks')
+      .select('id, content')
+      .limit(1);
+
+    console.log('Sample chunk check:', {
+      hasData: !!sampleChunks?.length,
+      sampleError
+    });
 
     if (searchError) {
       console.error('Search error:', searchError);
@@ -68,6 +84,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!chunks || chunks.length === 0) {
+      console.log('No chunks found for query:', query);
       return NextResponse.json({
         results: [],
         total: 0,
