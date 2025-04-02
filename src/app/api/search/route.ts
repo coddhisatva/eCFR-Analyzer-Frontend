@@ -11,6 +11,7 @@ interface SearchChunk {
   section_id: string;
   content: string;
   chunk_number: number;
+  rank: number;
   nodes: {
     id: string;
     level_type: string;
@@ -25,6 +26,7 @@ interface SearchResult {
   id: string;
   content: string;
   chunkNumber: number;
+  rank: number;
   section: {
     id: string;
     levelType: string;
@@ -47,15 +49,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // First, get content nodes that match the search query
+    // Use the GIN index on content_tsvector for primary search
     const { data: chunks, error: searchError } = await supabase
       .from('content_chunks')
       .select(`
         id,
-        section_id,
         content,
         chunk_number,
-        nodes!content_chunks_section_id_fkey (
+        section_id,
+        nodes!inner (
           id,
           level_type,
           number,
@@ -64,32 +66,38 @@ export async function GET(request: NextRequest) {
           parent
         )
       `)
-      .textSearch('content_tsvector', query)
-      .order('section_id')
-      .order('chunk_number')
+      .textSearch('content_tsvector', query, {
+        type: 'websearch',
+        config: 'english'
+      })
       .limit(50);
 
     if (searchError) {
+      console.error('Search error:', searchError);
       return NextResponse.json(
-        { error: 'Failed to perform search' },
+        { error: 'Failed to perform search', details: searchError.message },
         { status: 500 }
       );
     }
 
-    // Transform the results to include highlighted matches
-    const results: SearchResult[] = (chunks as SearchChunk[] || []).map(chunk => ({
-      id: chunk.id,
-      content: chunk.content,
-      chunkNumber: chunk.chunk_number,
-      section: {
-        id: chunk.nodes.id,
-        levelType: chunk.nodes.level_type,
-        number: chunk.nodes.number,
-        name: chunk.nodes.node_name,
-        citation: chunk.nodes.citation,
-        parent: chunk.nodes.parent
-      }
-    }));
+    // Transform results
+    const results: SearchResult[] = (chunks || []).map(chunk => {
+      const typedChunk = chunk as unknown as SearchChunk;
+      return {
+        id: typedChunk.id,
+        content: typedChunk.content,
+        chunkNumber: typedChunk.chunk_number,
+        rank: 0, // All results are ranked equally for now
+        section: {
+          id: typedChunk.nodes.id,
+          levelType: typedChunk.nodes.level_type,
+          number: typedChunk.nodes.number,
+          name: typedChunk.nodes.node_name,
+          citation: typedChunk.nodes.citation,
+          parent: typedChunk.nodes.parent
+        }
+      };
+    });
 
     return NextResponse.json({
       results,
@@ -98,6 +106,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    console.error('Search error:', error);
     return NextResponse.json(
       { error: 'Search failed', details: (error as Error).message },
       { status: 500 }
