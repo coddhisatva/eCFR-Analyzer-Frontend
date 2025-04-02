@@ -104,8 +104,8 @@ export async function GET(request: NextRequest) {
       const { data: contentChunks, error: contentError } = await supabase
         .from('content_chunks')
         .select('*')
-        .eq('node_id', nodeInfo.id)
-        .order('chunk_index', { ascending: true });
+        .eq('section_id', nodeInfo.id)
+        .order('chunk_number', { ascending: true });
       
       if (contentError) {
         console.error('Error fetching content:', contentError);

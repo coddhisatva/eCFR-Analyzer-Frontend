@@ -14,9 +14,10 @@ export interface RegulationNode {
 
 export interface ContentChunk {
   id: string;
-  node_id: string;
+  section_id: string;
   content: string;
-  chunk_index: number;
+  chunk_number: number;
+  content_tsvector?: any;  // Adding this as it's in the DB but we might not use it directly
   metadata?: Record<string, any>;
 }
 
