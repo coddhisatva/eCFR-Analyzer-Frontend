@@ -8,36 +8,24 @@ export async function GET() {
       process.env.SUPABASE_KEY || ''
     );
 
-    // Fetch total metrics
-    const { data: totalMetrics, error: metricsError } = await supabase
+    // Get total count of agencies
+    const { count: totalAgencies } = await supabase
       .from('agencies')
-      .select(`
-        count,
-        num_sections,
-        num_words,
-        num_corrections
-      `);
+      .select('*', { count: 'exact', head: true });
 
-    if (metricsError) {
-      console.error('Error fetching total metrics:', metricsError);
+    // Get sum of metrics
+    const { data: sums, error: sumsError } = await supabase
+      .from('agencies')
+      .select('sum_sections:sum(num_sections), sum_words:sum(num_words), sum_corrections:sum(num_corrections)')
+      .single();
+
+    if (sumsError) {
+      console.error('Error fetching total metrics:', sumsError);
       return NextResponse.json(
         { error: 'Failed to fetch total metrics' },
         { status: 500 }
       );
     }
-
-    // Calculate totals
-    const totals = totalMetrics.reduce((acc, agency) => ({
-      totalAgencies: acc.totalAgencies + 1,
-      totalSections: acc.totalSections + (agency.num_sections || 0),
-      totalWords: acc.totalWords + (agency.num_words || 0),
-      totalCorrections: acc.totalCorrections + (agency.num_corrections || 0)
-    }), {
-      totalAgencies: 0,
-      totalSections: 0,
-      totalWords: 0,
-      totalCorrections: 0
-    });
 
     // Fetch top agencies by corrections
     const { data: topByCorrections, error: correctionsError } = await supabase
@@ -70,7 +58,12 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      totalMetrics: totals,
+      totalMetrics: {
+        totalAgencies,
+        totalSections: sums?.sum_sections || 0,
+        totalWords: sums?.sum_words || 0,
+        totalCorrections: sums?.sum_corrections || 0
+      },
       topAgenciesByCorrections: topByCorrections.map(agency => ({
         name: agency.name,
         count: agency.num_corrections
