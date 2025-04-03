@@ -161,7 +161,7 @@ export default async function AgencyPage({ params }: { params: { id: string } })
               {references.map((ref) => (
                 <Link
                   key={ref.id}
-                  href={`/browse/${ref.node.path}`}
+                  href={`/browse/${ref.node.level_type}=${ref.node.number}`}
                   className="block"
                 >
                   <Card className="h-full hover:shadow-lg transition-shadow">

@@ -81,11 +81,22 @@ export async function GET(
     // Create a map of node data
     const nodeMap = new Map(nodes?.map(node => [node.id, node]) || []);
 
-    // Combine the reference data with node data
-    const referencesWithNodes = references?.map(ref => ({
-      ...ref,
-      node: nodeMap.get(ref.node_id)
-    })) || [];
+    // Combine the reference data with node data, keeping all references
+    const referencesWithNodes = references?.map(ref => {
+      const node = nodeMap.get(ref.node_id);
+      if (!node) {
+        console.warn(`Node not found for reference ${ref.id} with node_id ${ref.node_id}`);
+      }
+      return {
+        ...ref,
+        node: node || {
+          citation: `Node ${ref.node_id}`,
+          node_name: 'Node not found',
+          level_type: 'unknown',
+          number: ref.node_id
+        }
+      };
+    }) || [];
 
     return NextResponse.json({
       agency,
