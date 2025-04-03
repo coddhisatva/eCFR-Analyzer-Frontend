@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const sortBy = searchParams.get('sortBy') || 'name';
-    const sortOrder = searchParams.get('sortOrder') || 'asc';
+    const sortOrder = searchParams.get('sortOrder') || (sortBy === 'name' ? 'asc' : 'desc');
 
     const supabase = createClient(
       process.env.SUPABASE_URL || '',

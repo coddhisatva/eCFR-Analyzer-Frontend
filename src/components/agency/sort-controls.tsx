@@ -8,10 +8,13 @@ export function SortControls() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentSort = searchParams.get("sortBy") || "name"
+  const currentOrder = searchParams.get("sortOrder") || (currentSort === "name" ? "asc" : "desc")
 
   const handleSortChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("sortBy", value)
+    // Set default order based on the field type
+    params.set("sortOrder", value === "name" ? "asc" : "desc")
     router.push(`/agency?${params.toString()}`)
   }
 
