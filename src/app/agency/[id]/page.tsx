@@ -104,6 +104,15 @@ export default async function AgencyPage({ params }: { params: { id: string } })
               <div className="text-sm text-gray-600">
                 {references.length} Direct CFR References
               </div>
+              <div className="text-sm text-gray-600">
+                {agency.num_sections.toLocaleString()} Total Sections
+              </div>
+              <div className="text-sm text-gray-600">
+                {agency.num_words.toLocaleString()} Total Words
+              </div>
+              <div className="text-sm text-gray-600">
+                {agency.num_corrections.toLocaleString()} Total Corrections
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

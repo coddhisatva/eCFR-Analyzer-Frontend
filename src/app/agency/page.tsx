@@ -51,6 +51,18 @@ export default async function AgencyPage() {
                       <div className="text-gray-500">Subagencies</div>
                       <div className="font-semibold">{agency.num_children}</div>
                     </div>
+                    <div>
+                      <div className="text-gray-500">Sections</div>
+                      <div className="font-semibold">{agency.num_sections.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Words</div>
+                      <div className="font-semibold">{agency.num_words.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Corrections</div>
+                      <div className="font-semibold">{agency.num_corrections.toLocaleString()}</div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
