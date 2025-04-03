@@ -117,7 +117,8 @@ export async function GET(request: NextRequest) {
           parent
         )
       `)
-      .textSearch('content_tsvector', query)
+      // Format query for multiple words: split by spaces and join with & for AND search
+      .textSearch('content_tsvector', query.split(/\s+/).join(' & '))
       .limit(5);
 
     // Apply title filter if titles are selected
