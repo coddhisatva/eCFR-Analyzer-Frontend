@@ -53,7 +53,8 @@ export async function GET(
       .from('agency_node_mappings')
       .select(`
         nodes (*)
-      `);
+      `)
+      .eq('agency_id', params.id);
 
     if (nodesError) {
       console.error('Error fetching nodes:', nodesError);
@@ -63,10 +64,13 @@ export async function GET(
       );
     }
 
+    // Store the ID to avoid using params.id in the map function
+    const agencyId = params.id;
+
     // Convert nodes into references format to maintain compatibility
     const references = (nodes || []).map((record: any, index) => ({
-      id: `${params.id}_${record.nodes.id}`,  // Generate a unique reference ID
-      agency_id: params.id,
+      id: `${agencyId}_${record.nodes.id}`,  // Generate a unique reference ID
+      agency_id: agencyId,
       node_id: record.nodes.id,
       ordinal: index,
       node: record.nodes
