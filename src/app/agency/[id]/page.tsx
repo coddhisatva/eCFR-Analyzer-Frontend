@@ -58,7 +58,7 @@ async function fetchParentAgencies(parentId: string | null): Promise<Agency[]> {
 }
 
 export default async function AgencyPage({ params }: { params: { id: string } }) {
-  const { agency, children } = await fetchAgencyData(params.id);
+  const { agency, children, references } = await fetchAgencyData(params.id);
   const parentAgencies = await fetchParentAgencies(agency.parent_id);
 
   return (
@@ -148,6 +148,42 @@ export default async function AgencyPage({ params }: { params: { id: string } })
         {children.length === 0 && (
           <div className="text-center text-gray-500 mt-8">
             This agency has no subagencies.
+          </div>
+        )}
+
+        {/* CFR References Section */}
+        {references && references.length > 0 && (
+          <div className="space-y-4 mt-8">
+            <h2 className="text-2xl font-semibold">
+              CFR References <span className="text-gray-500 text-lg">({references.length})</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {references.map((ref) => (
+                <Link
+                  key={ref.id}
+                  href={`/browse/${ref.node.path}`}
+                  className="block"
+                >
+                  <Card className="h-full hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <CardTitle className="text-xl">{ref.node.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm">
+                        <div className="text-gray-500">Sections</div>
+                        <div className="font-semibold">{ref.node.num_sections}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(!references || references.length === 0) && (
+          <div className="text-center text-gray-500 mt-8">
+            This agency has no CFR references.
           </div>
         )}
       </div>
