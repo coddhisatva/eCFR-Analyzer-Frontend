@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Calendar, Clock, FileText } from "lucide-react";
+import { BarChart as BarChartIcon, Calendar, Clock, FileText } from "lucide-react";
 import { DateRange } from "react-day-picker";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Correction {
   id: string;
@@ -36,6 +37,12 @@ interface Analytics {
   correctionsByMonth: Record<string, number>;
 }
 
+interface FilterOption {
+  value: string;
+  label: string;
+  abbreviation?: string;
+}
+
 export default function HistoryPage() {
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -43,6 +50,8 @@ export default function HistoryPage() {
   const [selectedAgency, setSelectedAgency] = useState<string>("");
   const [selectedTitle, setSelectedTitle] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [agencies, setAgencies] = useState<FilterOption[]>([]);
+  const [titles, setTitles] = useState<FilterOption[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -58,43 +67,78 @@ export default function HistoryPage() {
       if (dateRange?.to) {
         params.append("endDate", dateRange.to.toISOString());
       }
-      if (selectedAgency) {
+      if (selectedAgency && selectedAgency !== "all") {
         params.append("agency", selectedAgency);
       }
-      if (selectedTitle) {
+      if (selectedTitle && selectedTitle !== "all") {
         params.append("title", selectedTitle);
       }
 
       const response = await fetch(`/api/corrections?${params.toString()}`);
-      const data = await response.json();
-
-      if (response.ok) {
-        setCorrections(data.corrections);
-        setAnalytics(data.analytics);
-      } else {
-        console.error("Error fetching data:", data.error);
+      
+      // Check if response is ok before trying to parse JSON
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("API Error Response:", text);
+        throw new Error(`API error: ${response.status}`);
       }
+
+      const data = await response.json();
+      setCorrections(data.corrections || []);
+      setAnalytics(data.analytics || null);
+      setAgencies(data.filters?.agencies || []);
+      setTitles(data.filters?.titles || []);
     } catch (error) {
       console.error("Error fetching data:", error);
+      setCorrections([]);
+      setAnalytics(null);
     } finally {
       setLoading(false);
     }
   };
 
+  // Transform corrections by month data for chart
+  const monthlyChartData = analytics?.correctionsByMonth 
+    ? Object.entries(analytics.correctionsByMonth)
+        .map(([month, count]) => ({ month, count }))
+        .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
+    : [];
+
+  // Calculate duration distribution
+  const durationRanges = [
+    { range: '0-7 days', min: 0, max: 7 },
+    { range: '1-2 weeks', min: 8, max: 14 },
+    { range: '2-4 weeks', min: 15, max: 30 },
+    { range: '1-3 months', min: 31, max: 90 },
+    { range: '3-6 months', min: 91, max: 180 },
+    { range: '6+ months', min: 181, max: Infinity }
+  ];
+
+  const durationDistribution = corrections.reduce((acc, correction) => {
+    const duration = Math.round((new Date(correction.error_corrected).getTime() - 
+                               new Date(correction.error_occurred).getTime()) / 
+                               (1000 * 60 * 60 * 24));
+    
+    const range = durationRanges.find(r => duration >= r.min && duration <= r.max);
+    if (range) {
+      acc[range.range] = (acc[range.range] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const durationChartData = Object.entries(durationDistribution)
+    .map(([range, count]) => ({ range, count }));
+
   return (
     <div className="container mx-auto p-6 space-y-8">
-      {/* Page Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Correction History</h1>
       </div>
 
-      {/* Analytics Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Corrections
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total Corrections</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -109,26 +153,20 @@ export default function HistoryPage() {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Average Duration
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Average Duration</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "..." : `${analytics?.averageDuration} days`}
+              {loading ? "..." : `${analytics?.averageDuration || 0} days`}
             </div>
-            <p className="text-xs text-muted-foreground">
-              To fix an error
-            </p>
+            <p className="text-xs text-muted-foreground">To fix an error</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Most Active Month
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Most Active Month</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -143,10 +181,8 @@ export default function HistoryPage() {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Longest Duration
-            </CardTitle>
-            <BarChart className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Longest Duration</CardTitle>
+            <BarChartIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -159,38 +195,65 @@ export default function HistoryPage() {
         </Card>
       </div>
 
-      {/* Main Content Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Charts Section */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Corrections Over Time Chart */}
           <Card>
             <CardHeader>
               <CardTitle>Corrections Over Time</CardTitle>
             </CardHeader>
             <CardContent className="h-[300px]">
-              {/* Chart will go here */}
-              <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
-                {loading ? "Loading..." : "Chart: Corrections by Month"}
-              </div>
+              {loading ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  Loading...
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="month" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
-          {/* Duration Distribution Chart */}
           <Card>
             <CardHeader>
               <CardTitle>Correction Duration Distribution</CardTitle>
             </CardHeader>
             <CardContent className="h-[300px]">
-              {/* Chart will go here */}
-              <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
-                {loading ? "Loading..." : "Chart: Duration Distribution"}
-              </div>
+              {loading ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  Loading...
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={durationChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="range" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Search Filters Section */}
         <Card className="h-fit">
           <CardHeader>
             <CardTitle>Search Corrections</CardTitle>
@@ -212,9 +275,11 @@ export default function HistoryPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Agencies</SelectItem>
-                  <SelectItem value="EPA">Environmental Protection Agency</SelectItem>
-                  <SelectItem value="DOT">Department of Transportation</SelectItem>
-                  <SelectItem value="DOL">Department of Labor</SelectItem>
+                  {agencies.map(agency => (
+                    <SelectItem key={agency.value} value={agency.value}>
+                      {agency.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -227,9 +292,11 @@ export default function HistoryPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Titles</SelectItem>
-                  <SelectItem value="40">Title 40 - Protection of Environment</SelectItem>
-                  <SelectItem value="49">Title 49 - Transportation</SelectItem>
-                  <SelectItem value="29">Title 29 - Labor</SelectItem>
+                  {titles.map(title => (
+                    <SelectItem key={title.value} value={title.value}>
+                      {title.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -237,7 +304,6 @@ export default function HistoryPage() {
         </Card>
       </div>
 
-      {/* Results Section */}
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Search Results</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

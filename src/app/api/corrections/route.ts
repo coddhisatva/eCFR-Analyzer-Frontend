@@ -6,18 +6,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-interface SupabaseCorrection {
-  error_occurred: string;
-  error_corrected: string;
-  nodes: {
-    title: string;
-    agencies: {
-      name: string;
-      abbreviation: string;
-    }[];
-  }[];
-}
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -26,38 +14,30 @@ export async function GET(request: Request) {
     const agency = searchParams.get("agency");
     const title = searchParams.get("title");
 
-    // Base query for corrections
-    let query = supabase
+    // Base query conditions
+    const baseQuery = {
+      ...(startDate && { error_occurred: { gte: startDate } }),
+      ...(endDate && { error_corrected: { lte: endDate } }),
+      ...(agency && { agency_id: agency }),
+      ...(title && { title: parseInt(title) })
+    };
+
+    // Get corrections with pagination using indexes
+    const { data: corrections, error: correctionsError } = await supabase
       .from("corrections")
       .select(`
         *,
-        nodes (
+        nodes!inner (
           title,
-          agency_id,
-          agencies (
+          node_name,
+          agencies!inner (
             name,
             abbreviation
           )
         )
-      `);
-
-    // Apply filters if provided
-    if (startDate) {
-      query = query.gte("error_occurred", startDate);
-    }
-    if (endDate) {
-      query = query.lte("error_occurred", endDate);
-    }
-    if (agency) {
-      query = query.eq("nodes.agencies.abbreviation", agency);
-    }
-    if (title) {
-      query = query.eq("nodes.title", title);
-    }
-
-    // Get corrections with pagination
-    const { data: corrections, error: correctionsError } = await query
-      .order("error_occurred", { ascending: false })
+      `)
+      .match(baseQuery)
+      .order('error_occurred', { ascending: false })
       .limit(50);
 
     if (correctionsError) {
@@ -68,83 +48,119 @@ export async function GET(request: Request) {
       );
     }
 
-    // Get analytics data
-    const { data: analytics, error: analyticsError } = await supabase
+    // Get total count using index
+    const { count: totalCorrections, error: countError } = await supabase
       .from("corrections")
-      .select(`
-        error_occurred,
-        error_corrected,
-        nodes (
-          title,
-          agencies (
-            name,
-            abbreviation
-          )
-        )
-      `);
+      .select("*", { count: "exact", head: true })
+      .match(baseQuery);
 
-    if (analyticsError) {
-      console.error("Error fetching analytics:", analyticsError);
-      return NextResponse.json(
-        { error: "Failed to fetch analytics" },
-        { status: 500 }
-      );
+    if (countError) {
+      console.error("Error getting count:", countError);
     }
 
-    // Get total count separately
-    const { count: totalCount } = await supabase
+    // Get average duration using correction_duration index
+    const { data: avgData, error: avgError } = await supabase
       .from("corrections")
-      .select("*", { count: "exact", head: true });
+      .select("correction_duration")
+      .match(baseQuery)
+      .avg("correction_duration");
 
-    const totalCorrections = totalCount || 0;
+    if (avgError) {
+      console.error("Error getting average:", avgError);
+    }
 
-    // Calculate analytics
-    const averageDuration =
-      analytics?.reduce((acc, curr: SupabaseCorrection) => {
-        const duration = new Date(curr.error_corrected).getTime() - new Date(curr.error_occurred).getTime();
-        return acc + duration;
-      }, 0) / totalCorrections / (1000 * 60 * 60 * 24); // Convert to days
+    // Get longest correction using duration index
+    const { data: longestData, error: longestError } = await supabase
+      .from("corrections")
+      .select(`
+        correction_duration,
+        nodes!inner (
+          title,
+          agencies!inner (
+            name
+          )
+        )
+      `)
+      .match(baseQuery)
+      .order('correction_duration', { ascending: false })
+      .limit(1)
+      .single();
 
-    // Get corrections by month
-    const correctionsByMonth = analytics?.reduce((acc: Record<string, number>, curr: SupabaseCorrection) => {
-      const month = new Date(curr.error_occurred).toLocaleString("default", {
+    if (longestError) {
+      console.error("Error getting longest:", longestError);
+    }
+
+    // Get corrections by month using error_occurred index
+    const { data: monthlyData, error: monthlyError } = await supabase
+      .from("corrections")
+      .select("error_occurred")
+      .match(baseQuery);
+
+    if (monthlyError) {
+      console.error("Error getting monthly data:", monthlyError);
+    }
+
+    // Process monthly data
+    const correctionsByMonth: Record<string, number> = {};
+    let mostActiveMonth = { month: "", count: 0 };
+
+    monthlyData?.forEach(c => {
+      const month = new Date(c.error_occurred).toLocaleString("default", {
         month: "long",
-        year: "numeric",
+        year: "numeric"
       });
-      acc[month] = (acc[month] || 0) + 1;
-      return acc;
-    }, {});
+      correctionsByMonth[month] = (correctionsByMonth[month] || 0) + 1;
+      
+      if (correctionsByMonth[month] > mostActiveMonth.count) {
+        mostActiveMonth = { month, count: correctionsByMonth[month] };
+      }
+    });
 
-    // Get longest correction
-    const longestCorrection = analytics?.reduce((longest, curr: SupabaseCorrection) => {
-      const duration = new Date(curr.error_corrected).getTime() - new Date(curr.error_occurred).getTime();
-      const title = curr.nodes[0]?.title || "";
-      const agency = curr.nodes[0]?.agencies[0]?.name || "";
-      return duration > longest.duration
-        ? { duration, title, agency }
-        : longest;
-    }, { duration: 0, title: "", agency: "" });
+    // Get available agencies for filter
+    const { data: agencies, error: agenciesError } = await supabase
+      .from('agencies')
+      .select('id, name, abbreviation')
+      .order('name');
 
-    // Get most active month
-    const mostActiveMonth = Object.entries(correctionsByMonth || {}).reduce(
-      (most: { month: string; count: number }, [month, count]: [string, number]) =>
-        count > most.count ? { month, count } : most,
-      { month: "", count: 0 }
-    );
+    if (agenciesError) {
+      console.error("Error fetching agencies:", agenciesError);
+    }
+
+    // Get available titles for filter using index
+    const { data: titles, error: titlesError } = await supabase
+      .from('nodes')
+      .select('title, node_name')
+      .eq('level_type', 'title')
+      .order('title');
+
+    if (titlesError) {
+      console.error("Error fetching titles:", titlesError);
+    }
 
     return NextResponse.json({
       corrections,
       analytics: {
-        totalCorrections,
-        averageDuration: Math.round(averageDuration),
+        totalCorrections: totalCorrections || 0,
+        averageDuration: Math.round(avgData?.[0]?.avg || 0),
         mostActiveMonth,
-        longestCorrection: {
-          duration: Math.round(longestCorrection.duration / (1000 * 60 * 60 * 24 * 365) * 10) / 10, // Convert to years with 1 decimal
-          title: longestCorrection.title,
-          agency: longestCorrection.agency,
-        },
-        correctionsByMonth,
+        longestCorrection: longestData ? {
+          duration: Math.round(longestData.correction_duration / 365 * 10) / 10,
+          title: longestData.nodes?.title || '',
+          agency: longestData.nodes?.agencies?.[0]?.name || ''
+        } : null,
+        correctionsByMonth
       },
+      filters: {
+        agencies: agencies?.map(a => ({
+          value: a.id,
+          label: a.name,
+          abbreviation: a.abbreviation
+        })) || [],
+        titles: titles?.map(t => ({
+          value: t.title.toString(),
+          label: `Title ${t.title} - ${t.node_name}`
+        })) || []
+      }
     });
   } catch (error) {
     console.error("Error in corrections API:", error);
