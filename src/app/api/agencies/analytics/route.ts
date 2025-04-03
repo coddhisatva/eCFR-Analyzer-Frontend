@@ -1,6 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+interface AgencyMetrics {
+  num_sections: number;
+  num_words: number;
+  num_corrections: number;
+}
+
+interface MetricSums {
+  sum_sections: number;
+  sum_words: number;
+  sum_corrections: number;
+}
+
 export async function GET() {
   try {
     const supabase = createClient(
@@ -16,8 +28,16 @@ export async function GET() {
     // Get sum of metrics
     const { data: sums, error: sumsError } = await supabase
       .from('agencies')
-      .select('sum_sections:sum(num_sections), sum_words:sum(num_words), sum_corrections:sum(num_corrections)')
-      .single();
+      .select('num_sections, num_words, num_corrections')
+      .then(result => {
+        if (result.error) throw result.error;
+        const totals = (result.data as AgencyMetrics[] || []).reduce((acc, agency) => ({
+          sum_sections: (acc.sum_sections || 0) + (agency.num_sections || 0),
+          sum_words: (acc.sum_words || 0) + (agency.num_words || 0),
+          sum_corrections: (acc.sum_corrections || 0) + (agency.num_corrections || 0)
+        }), {} as MetricSums);
+        return { data: totals, error: null };
+      });
 
     if (sumsError) {
       console.error('Error fetching total metrics:', sumsError);
