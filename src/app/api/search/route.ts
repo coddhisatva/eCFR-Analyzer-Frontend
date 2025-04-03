@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const query = url.searchParams.get('q');
+    const titles = url.searchParams.getAll('titles[]').map(t => parseInt(t));
     
     if (!query) {
       return NextResponse.json(
@@ -49,8 +50,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    let nodeIds: string[] | undefined;
+    
+    // If titles are selected, get all nodes for those titles
+    if (titles.length > 0) {
+      const { data: nodes, error: nodeError } = await supabase
+        .from("nodes")
+        .select("id")
+        .in("top_level_title", titles);
+        
+      if (nodeError) {
+        console.error('Error fetching nodes by title:', nodeError);
+        return NextResponse.json(
+          { error: 'Failed to filter by titles', details: nodeError.message },
+          { status: 500 }
+        );
+      }
+      
+      nodeIds = nodes.map(node => node.id);
+    }
+
     // First try exact section number match
-    const { data: exactMatches, error: exactError } = await supabase
+    let exactQuery = supabase
       .from('nodes')
       .select(`
         id,
@@ -68,12 +89,19 @@ export async function GET(request: NextRequest) {
       .eq('number', query)
       .limit(5);
 
+    // Apply title filter if titles are selected
+    if (nodeIds) {
+      exactQuery = exactQuery.in('id', nodeIds);
+    }
+
+    const { data: exactMatches, error: exactError } = await exactQuery;
+
     if (exactError) {
       console.error('Exact match search error:', exactError);
     }
 
     // Then do simple content search
-    const { data: contentMatches, error: contentError } = await supabase
+    let contentQuery = supabase
       .from('content_chunks')
       .select(`
         id,
@@ -91,6 +119,13 @@ export async function GET(request: NextRequest) {
       `)
       .ilike('content', `%${query}%`)
       .limit(5);
+
+    // Apply title filter if titles are selected
+    if (nodeIds) {
+      contentQuery = contentQuery.in('section_id', nodeIds);
+    }
+
+    const { data: contentMatches, error: contentError } = await contentQuery;
 
     if (contentError) {
       console.error('Content search error:', contentError);
