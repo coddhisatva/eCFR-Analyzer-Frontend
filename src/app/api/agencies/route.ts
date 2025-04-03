@@ -1,8 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const sortBy = searchParams.get('sortBy') || 'name';
+    const sortOrder = searchParams.get('sortOrder') || 'asc';
+
     const supabase = createClient(
       process.env.SUPABASE_URL || '',
       process.env.SUPABASE_KEY || ''
@@ -13,7 +17,7 @@ export async function GET() {
       .from('agencies')
       .select('*')
       .is('parent_id', null)
-      .order('name', { ascending: true });
+      .order(sortBy, { ascending: sortOrder === 'asc' });
 
     if (error) {
       console.error('Error fetching agencies:', error);

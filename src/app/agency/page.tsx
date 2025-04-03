@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { AgencyAnalyticsSidebar } from "@/components/layout/agency-analytics-sidebar";
+import { SortControls } from "@/components/agency/sort-controls";
 
-async function fetchAgencies() {
+async function fetchAgencies(sortBy: string = 'name', sortOrder: string = 'asc') {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/agencies`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/agencies?sortBy=${sortBy}&sortOrder=${sortOrder}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store'
@@ -22,13 +23,22 @@ async function fetchAgencies() {
   }
 }
 
-export default async function AgencyPage() {
-  const agencies = await fetchAgencies();
+export default async function AgencyPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const sortBy = typeof searchParams.sortBy === 'string' ? searchParams.sortBy : 'name';
+  const sortOrder = typeof searchParams.sortOrder === 'string' ? searchParams.sortOrder : 'asc';
+  const agencies = await fetchAgencies(sortBy, sortOrder);
 
   return (
     <div className="flex h-full">
       <div className="flex-1 overflow-y-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Federal Agencies</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Federal Agencies</h1>
+          <SortControls />
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {agencies.map((agency: any) => (
