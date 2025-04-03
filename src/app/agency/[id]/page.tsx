@@ -127,9 +127,28 @@ export default async function AgencyPage({ params }: { params: { id: string } })
                         href={`/agency/${child.id}`}
                         className="block p-4 rounded-lg border hover:border-blue-500 transition-colors"
                       >
-                        <div className="font-medium">{child.name}</div>
-                        <div className="text-sm text-gray-600">
-                          {child.num_cfr} CFR References
+                        <div className="font-medium mb-2">{child.name}</div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <div className="text-gray-500">CFR References</div>
+                            <div className="font-semibold">{child.num_cfr}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Subagencies</div>
+                            <div className="font-semibold">{child.num_children}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Sections</div>
+                            <div className="font-semibold">{child.num_sections.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Words</div>
+                            <div className="font-semibold">{child.num_words.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Corrections</div>
+                            <div className="font-semibold">{child.num_corrections.toLocaleString()}</div>
+                          </div>
                         </div>
                       </Link>
                     ))}
