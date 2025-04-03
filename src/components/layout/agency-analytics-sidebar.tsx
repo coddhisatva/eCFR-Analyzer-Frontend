@@ -1,8 +1,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, FileText, Hash, History } from "lucide-react";
+import { BarChart3, FileText, Hash } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type AnalyticsData = {
   totalMetrics: {
@@ -104,7 +110,18 @@ export function AgencyAnalyticsSidebar() {
                   key={agency.name} 
                   className="flex justify-between items-center text-sm p-2 rounded hover:bg-gray-100 transition-colors"
                 >
-                  <span className="text-gray-600 truncate">{index + 1}. {agency.name}</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-gray-600 truncate">
+                          {index + 1}. {agency.name}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{agency.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <span className="font-medium">{agency.count}</span>
                 </div>
               ))}
@@ -126,7 +143,18 @@ export function AgencyAnalyticsSidebar() {
                   key={agency.name} 
                   className="flex justify-between items-center text-sm p-2 rounded hover:bg-gray-100 transition-colors"
                 >
-                  <span className="text-gray-600 truncate">{index + 1}. {agency.name}</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-gray-600 truncate">
+                          {index + 1}. {agency.name}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{agency.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <span className="font-medium">{agency.count.toLocaleString()}</span>
                 </div>
               ))}
