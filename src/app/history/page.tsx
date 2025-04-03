@@ -52,6 +52,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [agencies, setAgencies] = useState<FilterOption[]>([]);
   const [titles, setTitles] = useState<FilterOption[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -59,41 +60,49 @@ export default function HistoryPage() {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      console.group('History Page Data Fetch');
+      console.log('Fetching with params:', { startDate: dateRange?.from, endDate: dateRange?.to, selectedAgency, selectedTitle });
+      
       const params = new URLSearchParams();
-      if (dateRange?.from) {
-        params.append("startDate", dateRange.from.toISOString());
-      }
-      if (dateRange?.to) {
-        params.append("endDate", dateRange.to.toISOString());
-      }
-      if (selectedAgency && selectedAgency !== "all") {
-        params.append("agency", selectedAgency);
-      }
-      if (selectedTitle && selectedTitle !== "all") {
-        params.append("title", selectedTitle);
+      if (dateRange?.from) params.append('startDate', dateRange.from.toISOString());
+      if (dateRange?.to) params.append('endDate', dateRange.to.toISOString());
+      if (selectedAgency && selectedAgency !== "all") params.append('agency', selectedAgency);
+      if (selectedTitle && selectedTitle !== "all") params.append('title', selectedTitle);
+      
+      const response = await fetch(`/api/corrections?${params}`);
+      console.log('Response status:', response.status);
+      
+      const text = await response.text();
+      console.log('Raw response:', text);
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('JSON Parse Error:', e);
+        console.log('Failed to parse response:', text);
+        throw new Error('Failed to parse response');
       }
 
-      const response = await fetch(`/api/corrections?${params.toString()}`);
-      
-      // Check if response is ok before trying to parse JSON
       if (!response.ok) {
-        const text = await response.text();
-        console.error("API Error Response:", text);
+        console.error('API Error Response:', data);
         throw new Error(`API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      console.log('Parsed data:', data);
       setCorrections(data.corrections || []);
-      setAnalytics(data.analytics || null);
+      setAnalytics(data.analytics || {});
       setAgencies(data.filters?.agencies || []);
       setTitles(data.filters?.titles || []);
+      setLoading(false);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error('Error fetching data:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error');
       setCorrections([]);
       setAnalytics(null);
-    } finally {
       setLoading(false);
+    } finally {
+      console.groupEnd();
     }
   };
 
