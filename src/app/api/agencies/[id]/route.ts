@@ -48,27 +48,12 @@ export async function GET(
       );
     }
 
-    // First get the CFR references
-    const { data: references, error: referencesError } = await supabase
-      .from('cfr_references')
-      .select('*')
-      .eq('agency_id', params.id)
-      .order('ordinal', { ascending: true });
-
-    if (referencesError) {
-      console.error('Error fetching CFR references:', referencesError);
-      return NextResponse.json(
-        { error: 'Failed to fetch CFR references' },
-        { status: 500 }
-      );
-    }
-
-    // Then fetch the corresponding nodes
-    const nodeIds = references?.map(ref => ref.node_id) || [];
+    // Get all nodes mapped to this agency using the agency index
     const { data: nodes, error: nodesError } = await supabase
-      .from('nodes')
-      .select('*')
-      .in('id', nodeIds);
+      .from('agency_node_mappings')
+      .select(`
+        nodes (*)
+      `);
 
     if (nodesError) {
       console.error('Error fetching nodes:', nodesError);
@@ -78,30 +63,19 @@ export async function GET(
       );
     }
 
-    // Create a map of node data
-    const nodeMap = new Map(nodes?.map(node => [node.id, node]) || []);
-
-    // Combine the reference data with node data, keeping all references
-    const referencesWithNodes = references?.map(ref => {
-      const node = nodeMap.get(ref.node_id);
-      if (!node) {
-        console.warn(`Node not found for reference ${ref.id} with node_id ${ref.node_id}`);
-      }
-      return {
-        ...ref,
-        node: node || {
-          citation: `Node ${ref.node_id}`,
-          node_name: 'Node not found',
-          level_type: 'unknown',
-          number: ref.node_id
-        }
-      };
-    }) || [];
+    // Convert nodes into references format to maintain compatibility
+    const references = (nodes || []).map((record: any, index) => ({
+      id: `${params.id}_${record.nodes.id}`,  // Generate a unique reference ID
+      agency_id: params.id,
+      node_id: record.nodes.id,
+      ordinal: index,
+      node: record.nodes
+    }));
 
     return NextResponse.json({
       agency,
       children: children || [],
-      references: referencesWithNodes
+      references
     });
   } catch (error) {
     console.error('Error in agency route:', error);

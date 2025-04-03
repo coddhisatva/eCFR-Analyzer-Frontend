@@ -93,98 +93,68 @@ export default async function AgencyPage({ params }: { params: { id: string } })
               </Link>
             </p>
           )}
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{agency.num_cfr}</div>
-                <div className="text-sm text-gray-500">CFR References</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{agency.num_children}</div>
-                <div className="text-sm text-gray-500">Subagencies</div>
-              </CardContent>
-            </Card>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="text-sm text-gray-600">
+                {children.length} Subagencies
+              </div>
+              <div className="text-sm text-gray-600">
+                {agency.num_cfr} Total CFR References (including subagencies)
+              </div>
+              <div className="text-sm text-gray-600">
+                {references.length} Direct CFR References
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Subagencies Column */}
+              <div className="flex flex-col gap-4">
+                <h2 className="text-xl font-semibold">Subagencies</h2>
+                {children.length > 0 ? (
+                  <div className="grid gap-4">
+                    {children.map((child: Agency) => (
+                      <Link
+                        key={child.id}
+                        href={`/agency/${child.id}`}
+                        className="block p-4 rounded-lg border hover:border-blue-500 transition-colors"
+                      >
+                        <div className="font-medium">{child.name}</div>
+                        <div className="text-sm text-gray-600">
+                          {child.num_cfr} CFR References
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-600">No subagencies found</div>
+                )}
+              </div>
+
+              {/* CFR References Column */}
+              <div className="flex flex-col gap-4">
+                <h2 className="text-xl font-semibold">Direct CFR References</h2>
+                {references.length > 0 ? (
+                  <div className="grid gap-4">
+                    {references.map((ref: { id: string; node: { id: string; citation: string; node_name: string } }) => (
+                      <Link
+                        key={ref.id}
+                        href={`/browse/${ref.node.id}`}
+                        className="block p-4 rounded-lg border hover:border-blue-500 transition-colors"
+                      >
+                        <div className="font-medium">{ref.node.citation}</div>
+                        <div className="text-sm text-gray-600">
+                          {ref.node.node_name}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-600">No direct CFR references found</div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Subagencies Section */}
-        {children.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-semibold">
-              Subagencies <span className="text-gray-500 text-lg">({children.length})</span>
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {children.map((child: Agency) => (
-                <Link
-                  key={child.id}
-                  href={`/agency/${child.id}`}
-                  className="block"
-                >
-                  <Card className="h-full hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="text-xl">{child.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <div className="text-gray-500">CFR References</div>
-                          <div className="font-semibold">{child.num_cfr}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Subagencies</div>
-                          <div className="font-semibold">{child.num_children}</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {children.length === 0 && (
-          <div className="text-center text-gray-500 mt-8">
-            This agency has no subagencies.
-          </div>
-        )}
-
-        {/* CFR References Section */}
-        {references && references.length > 0 && (
-          <div className="space-y-4 mt-8">
-            <h2 className="text-2xl font-semibold">
-              CFR References <span className="text-gray-500 text-lg">({references.length})</span>
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {references.map((ref) => (
-                <Link
-                  key={ref.id}
-                  href={`/browse/${ref.node.level_type}=${ref.node.number}`}
-                  className="block"
-                >
-                  <Card className="h-full hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="text-xl">{ref.node.citation}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm text-gray-600 truncate">
-                        {ref.node.node_name}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {(!references || references.length === 0) && (
-          <div className="text-center text-gray-500 mt-8">
-            This agency has no CFR references.
-          </div>
-        )}
       </div>
       
       <div className="w-72 border-l overflow-y-auto bg-gray-50 p-4">
