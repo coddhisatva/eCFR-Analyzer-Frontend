@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
           parent
         )
       `)
-      .ilike('content', `%${query}%`)
+      .textSearch('content_tsvector', query)
       .limit(5);
 
     // Apply title filter if titles are selected
