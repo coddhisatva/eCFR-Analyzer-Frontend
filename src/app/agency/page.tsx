@@ -44,16 +44,8 @@ export default async function AgencyPage() {
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <div className="text-gray-500">Sections</div>
-                      <div className="font-semibold">{agency.num_sections}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500">Words</div>
-                      <div className="font-semibold">{agency.num_words}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500">Corrections</div>
-                      <div className="font-semibold">{agency.num_corrections}</div>
+                      <div className="text-gray-500">CFR References</div>
+                      <div className="font-semibold">{agency.num_cfr}</div>
                     </div>
                     <div>
                       <div className="text-gray-500">Subagencies</div>

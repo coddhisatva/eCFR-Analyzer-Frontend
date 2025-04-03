@@ -10,6 +10,7 @@ interface Agency {
   num_corrections: number;
   num_children: number;
   parent_id: string | null;
+  num_cfr: number;
 }
 
 async function fetchAgencyData(id: string) {
@@ -85,23 +86,18 @@ export default async function AgencyPage({ params }: { params: { id: string } })
         {/* Agency Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">{agency.name}</h1>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {agency.parent_id && parentAgencies.length > 0 && (
+            <p className="text-gray-600 mb-4">
+              Part of: <Link href={`/agency/${parentAgencies[parentAgencies.length - 1].id}`} className="text-blue-600 hover:underline">
+                {parentAgencies[parentAgencies.length - 1].name}
+              </Link>
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-4">
             <Card>
               <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{agency.num_sections}</div>
-                <div className="text-sm text-gray-500">Sections</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{agency.num_words}</div>
-                <div className="text-sm text-gray-500">Words</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{agency.num_corrections}</div>
-                <div className="text-sm text-gray-500">Corrections</div>
+                <div className="text-2xl font-bold">{agency.num_cfr}</div>
+                <div className="text-sm text-gray-500">CFR References</div>
               </CardContent>
             </Card>
             <Card>
@@ -133,16 +129,8 @@ export default async function AgencyPage({ params }: { params: { id: string } })
                     <CardContent>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <div className="text-gray-500">Sections</div>
-                          <div className="font-semibold">{child.num_sections}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Words</div>
-                          <div className="font-semibold">{child.num_words}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Corrections</div>
-                          <div className="font-semibold">{child.num_corrections}</div>
+                          <div className="text-gray-500">CFR References</div>
+                          <div className="font-semibold">{child.num_cfr}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">Subagencies</div>
