@@ -166,12 +166,11 @@ export default async function AgencyPage({ params }: { params: { id: string } })
                 >
                   <Card className="h-full hover:shadow-lg transition-shadow">
                     <CardHeader>
-                      <CardTitle className="text-xl">{ref.node.title}</CardTitle>
+                      <CardTitle className="text-xl">{ref.node.citation}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-sm">
-                        <div className="text-gray-500">Sections</div>
-                        <div className="font-semibold">{ref.node.num_sections}</div>
+                      <div className="text-sm text-gray-600 truncate">
+                        {ref.node.node_name}
                       </div>
                     </CardContent>
                   </Card>
