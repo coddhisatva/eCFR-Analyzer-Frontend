@@ -100,7 +100,10 @@ export function AgencyAnalyticsSidebar() {
           <CardContent className="py-2 px-4">
             <div className="space-y-2">
               {analytics.topAgenciesByCorrections.map((agency, index) => (
-                <div key={agency.name} className="flex justify-between items-center text-sm">
+                <div 
+                  key={agency.name} 
+                  className="flex justify-between items-center text-sm p-2 rounded hover:bg-gray-100 transition-colors"
+                >
                   <span className="text-gray-600 truncate">{index + 1}. {agency.name}</span>
                   <span className="font-medium">{agency.count}</span>
                 </div>
@@ -119,30 +122,14 @@ export function AgencyAnalyticsSidebar() {
           <CardContent className="py-2 px-4">
             <div className="space-y-2">
               {analytics.topAgenciesBySections.map((agency, index) => (
-                <div key={agency.name} className="flex justify-between items-center text-sm">
+                <div 
+                  key={agency.name} 
+                  className="flex justify-between items-center text-sm p-2 rounded hover:bg-gray-100 transition-colors"
+                >
                   <span className="text-gray-600 truncate">{index + 1}. {agency.name}</span>
                   <span className="font-medium">{agency.count.toLocaleString()}</span>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="shadow-sm">
-          <CardHeader className="py-2 px-4">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <History className="h-4 w-4 mr-2" />
-              Correction Trends
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="py-2 px-4">
-            <div className="h-20 bg-gray-100 rounded flex items-end">
-              <div className="w-1/6 h-4 bg-blue-500 mx-[2px]"></div>
-              <div className="w-1/6 h-8 bg-blue-500 mx-[2px]"></div>
-              <div className="w-1/6 h-12 bg-blue-500 mx-[2px]"></div>
-              <div className="w-1/6 h-6 bg-blue-500 mx-[2px]"></div>
-              <div className="w-1/6 h-10 bg-blue-500 mx-[2px]"></div>
-              <div className="w-1/6 h-16 bg-blue-500 mx-[2px]"></div>
             </div>
           </CardContent>
         </Card>

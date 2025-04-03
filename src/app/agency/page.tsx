@@ -81,7 +81,7 @@ export default async function AgencyPage({
         </div>
       </div>
       
-      <div className="w-72 border-l overflow-y-auto bg-gray-50 p-4">
+      <div className="w-96 border-l overflow-y-auto bg-gray-50 p-4">
         <AgencyAnalyticsSidebar />
       </div>
     </div>
