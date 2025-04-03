@@ -48,9 +48,49 @@ export async function GET(
       );
     }
 
+    // First get the CFR references
+    const { data: references, error: referencesError } = await supabase
+      .from('cfr_references')
+      .select('*')
+      .eq('agency_id', params.id)
+      .order('ordinal', { ascending: true });
+
+    if (referencesError) {
+      console.error('Error fetching CFR references:', referencesError);
+      return NextResponse.json(
+        { error: 'Failed to fetch CFR references' },
+        { status: 500 }
+      );
+    }
+
+    // Then fetch the corresponding nodes
+    const nodeIds = references?.map(ref => ref.node_id) || [];
+    const { data: nodes, error: nodesError } = await supabase
+      .from('nodes')
+      .select('*')
+      .in('id', nodeIds);
+
+    if (nodesError) {
+      console.error('Error fetching nodes:', nodesError);
+      return NextResponse.json(
+        { error: 'Failed to fetch nodes' },
+        { status: 500 }
+      );
+    }
+
+    // Create a map of node data
+    const nodeMap = new Map(nodes?.map(node => [node.id, node]) || []);
+
+    // Combine the reference data with node data
+    const referencesWithNodes = references?.map(ref => ({
+      ...ref,
+      node: nodeMap.get(ref.node_id)
+    })) || [];
+
     return NextResponse.json({
       agency,
-      children: children || []
+      children: children || [],
+      references: referencesWithNodes
     });
   } catch (error) {
     console.error('Error in agency route:', error);
