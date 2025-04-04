@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { RegulationNode } from '@/types/regulation';
 
+export const runtime = 'nodejs';
+
 // Interface for content chunks from the database
 interface ContentChunk {
   id: string;

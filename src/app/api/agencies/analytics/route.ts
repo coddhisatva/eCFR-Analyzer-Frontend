@@ -1,5 +1,7 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { NextResponse } from 'next/server';
+
+export const runtime = 'nodejs';
 
 interface AgencyMetrics {
   num_sections: number;

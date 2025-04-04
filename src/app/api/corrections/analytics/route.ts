@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+
+export const runtime = 'nodejs';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
