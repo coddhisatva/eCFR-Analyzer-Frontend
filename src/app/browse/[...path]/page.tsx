@@ -18,11 +18,12 @@ type PageProps = {
 };
 
 async function fetchNodeData(pathArray: string[]) {
-  const pathString = pathArray.join('/');
+  // Convert path array to a single path string, matching the original API route
+  const path = pathArray.join('/');
   
   try {
     // Convert the path to a node ID format
-    const nodeId = pathString.startsWith('us/federal/ecfr/') ? pathString : `us/federal/ecfr/${pathString}`;
+    const nodeId = path.startsWith('us/federal/ecfr/') ? path : `us/federal/ecfr/${path}`;
 
     // First, try to get the node directly by ID
     let { data: nodeData, error: nodeError } = await supabase
@@ -38,7 +39,7 @@ async function fetchNodeData(pathArray: string[]) {
     // If node not found directly, try to parse the path
     if (!nodeData || nodeData.length === 0) {
       // Parse path segments to identify the node
-      const pathSegments = pathString.split('/');
+      const pathSegments = path.split('/');
       const lastSegment = pathSegments[pathSegments.length - 1] || '';
       const [levelType, number] = lastSegment.split('=');
       
@@ -59,7 +60,7 @@ async function fetchNodeData(pathArray: string[]) {
       }
       
       if (!fallbackData || fallbackData.length === 0) {
-        throw new Error(`No node found for path: ${pathString}`);
+        throw new Error(`No node found for path: ${path}`);
       }
       
       nodeData = fallbackData;
