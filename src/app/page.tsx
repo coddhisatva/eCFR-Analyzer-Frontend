@@ -7,6 +7,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 interface SearchResult {
   id: string;
@@ -86,78 +87,28 @@ export default function HomePage() {
 
         {/* Search Form */}
         <form onSubmit={handleSearch} className="space-y-4">
-          <div className="relative">
-            <Input
-              type="search"
-              placeholder="Example: requirements for financial institutions..."
-              className="w-full h-12 pl-4 pr-12 text-lg"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <Button
-              type="submit"
-              size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-              disabled={isLoading}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* Filter Panel */}
-          <div className="border rounded-lg p-4 bg-white shadow-sm space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="font-medium">Filter by Title</h2>
-              {selectedTitles.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedTitles([])}
-                  className="text-gray-500 text-sm"
-                >
-                  Clear all
-                </Button>
-              )}
+          <div className="flex gap-4 items-center mb-4">
+            <div className="flex-1">
+              <Input
+                type="text"
+                placeholder="Search..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
             </div>
-            
-            {/* Selected Titles */}
-            {selectedTitles.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {selectedTitles.map(title => (
-                  <Badge
-                    key={title}
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    Title {title}
-                    <button
-                      onClick={() => toggleTitle(title)}
-                      className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
+            <Select value={selectedTitles[0]?.toString() || ''} onValueChange={(value) => setSelectedTitles(value ? [parseInt(value)] : [])}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select Title" />
+              </SelectTrigger>
+              <SelectContent>
+                {TITLES.map(title => (
+                  <SelectItem key={title.value} value={title.value}>
+                    Title {title.value}
+                  </SelectItem>
                 ))}
-              </div>
-            )}
-            
-            {/* Title Grid */}
-            <div className="grid grid-cols-5 gap-2">
-              {TITLES.map(title => (
-                <button
-                  key={title.value}
-                  onClick={() => toggleTitle(title.value)}
-                  type="button"
-                  className={`p-2 text-sm rounded hover:bg-gray-100 transition-colors ${
-                    selectedTitles.includes(title.value)
-                      ? 'bg-gray-100 font-medium'
-                      : ''
-                  }`}
-                >
-                  {title.value}
-                </button>
-              ))}
-            </div>
+              </SelectContent>
+            </Select>
+            <Button onClick={handleSearch}>Search</Button>
           </div>
         </form>
 
