@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
 interface SearchResult {
   id: string;
@@ -20,11 +22,17 @@ interface SearchResult {
   };
 }
 
+const TITLES = Array.from({ length: 50 }, (_, i) => ({
+  value: (i + 1).toString(),
+  label: `Title ${i + 1}`
+}));
+
 export default function HomePage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +42,12 @@ export default function HomePage() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      // Build URL with title filters
+      const params = new URLSearchParams();
+      params.set('q', query);
+      selectedTitles.forEach(title => params.append('titles[]', title));
+      
+      const response = await fetch(`/api/search?${params.toString()}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -48,6 +61,14 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleTitle = (title: string) => {
+    setSelectedTitles(prev => 
+      prev.includes(title)
+        ? prev.filter(t => t !== title)
+        : [...prev, title]
+    );
   };
 
   return (
@@ -84,10 +105,58 @@ export default function HomePage() {
           </div>
 
           {/* Filter Panel */}
-          <div className="border rounded-lg p-4 bg-white shadow-sm">
-            <h2 className="font-medium mb-4">Filters</h2>
-            <div className="text-sm text-gray-500">
-              Filter options coming soon...
+          <div className="border rounded-lg p-4 bg-white shadow-sm space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="font-medium">Filter by Title</h2>
+              {selectedTitles.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedTitles([])}
+                  className="text-gray-500 text-sm"
+                >
+                  Clear all
+                </Button>
+              )}
+            </div>
+            
+            {/* Selected Titles */}
+            {selectedTitles.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedTitles.map(title => (
+                  <Badge
+                    key={title}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
+                    Title {title}
+                    <button
+                      onClick={() => toggleTitle(title)}
+                      className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            
+            {/* Title Grid */}
+            <div className="grid grid-cols-5 gap-2">
+              {TITLES.map(title => (
+                <button
+                  key={title.value}
+                  onClick={() => toggleTitle(title.value)}
+                  type="button"
+                  className={`p-2 text-sm rounded hover:bg-gray-100 transition-colors ${
+                    selectedTitles.includes(title.value)
+                      ? 'bg-gray-100 font-medium'
+                      : ''
+                  }`}
+                >
+                  {title.value}
+                </button>
+              ))}
             </div>
           </div>
         </form>
@@ -101,6 +170,11 @@ export default function HomePage() {
           <div className="space-y-6">
             <h2 className="text-lg font-semibold">
               Found {results.length} results
+              {selectedTitles.length > 0 && (
+                <span className="text-gray-500 text-base font-normal">
+                  {' '}in {selectedTitles.length} title{selectedTitles.length > 1 ? 's' : ''}
+                </span>
+              )}
             </h2>
             <div className="space-y-8">
               {results.map((result) => (

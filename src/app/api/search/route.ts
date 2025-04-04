@@ -50,26 +50,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let nodeIds: string[] | undefined;
-    
-    // If titles are selected, get all nodes for those titles
-    if (titles.length > 0) {
-      const { data: nodes, error: nodeError } = await supabase
-        .from("nodes")
-        .select("id")
-        .in("top_level_title", titles);
-        
-      if (nodeError) {
-        console.error('Error fetching nodes by title:', nodeError);
-        return NextResponse.json(
-          { error: 'Failed to filter by titles', details: nodeError.message },
-          { status: 500 }
-        );
-      }
-      
-      nodeIds = nodes.map(node => node.id);
-    }
-
     // First try exact section number match
     let exactQuery = supabase
       .from('nodes')
@@ -87,11 +67,12 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('number', query)
+      .eq('node_type', 'content')
       .limit(5);
 
     // Apply title filter if titles are selected
-    if (nodeIds) {
-      exactQuery = exactQuery.in('id', nodeIds);
+    if (titles.length > 0) {
+      exactQuery = exactQuery.in('top_level_title', titles);
     }
 
     const { data: exactMatches, error: exactError } = await exactQuery;
@@ -100,7 +81,7 @@ export async function GET(request: NextRequest) {
       console.error('Exact match search error:', exactError);
     }
 
-    // Then do simple content search
+    // Then do content search with optimized filtering
     let contentQuery = supabase
       .from('content_chunks')
       .select(`
@@ -117,16 +98,16 @@ export async function GET(request: NextRequest) {
           parent
         )
       `)
-      // Format query for multiple words: split by spaces and join with & for AND search
       .textSearch('content_tsvector', query.split(/\s+/).join(' & '))
-      .limit(5);
+      .eq('nodes.node_type', 'content');
 
-    // Apply title filter if titles are selected
-    if (nodeIds) {
-      contentQuery = contentQuery.in('section_id', nodeIds);
+    // Apply title filter directly using the index
+    if (titles.length > 0) {
+      contentQuery = contentQuery.in('nodes.top_level_title', titles);
     }
 
-    const { data: contentMatches, error: contentError } = await contentQuery;
+    const { data: contentMatches, error: contentError } = await contentQuery
+      .limit(5);
 
     if (contentError) {
       console.error('Content search error:', contentError);
