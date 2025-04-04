@@ -13,9 +13,11 @@ interface Correction {
   error_occurred: string;
   error_corrected: string;
   correction_duration: number;
-  node_id: string;
-  agency_id: string;
-  title: number;
+  nodes: {
+    node_name: string;
+    level_type: string;
+    number: string;
+  };
 }
 
 export default function HistoryPage() {
@@ -95,9 +97,12 @@ export default function HistoryPage() {
               <CardContent className="pt-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-medium">Title {correction.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">Node ID: {correction.node_id}</p>
-                    <p className="text-sm text-gray-600">Agency ID: {correction.agency_id}</p>
+                    <Link 
+                      href={`/browse/${correction.nodes.level_type}=${correction.nodes.number}`}
+                      className="text-lg font-medium text-blue-600 hover:underline"
+                    >
+                      {correction.nodes.node_name}
+                    </Link>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 text-sm">

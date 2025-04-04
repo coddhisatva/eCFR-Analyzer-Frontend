@@ -19,7 +19,17 @@ export async function GET(request: NextRequest) {
   try {
     let query = supabase
       .from('corrections')
-      .select('*')
+      .select(`
+        id,
+        error_occurred,
+        error_corrected,
+        correction_duration,
+        nodes:node_id (
+          node_name,
+          level_type,
+          number
+        )
+      `)
       .gte('error_occurred', start_date)
       .lte('error_occurred', end_date)
       .order('error_occurred', { ascending: false });
