@@ -18,12 +18,17 @@ type PageProps = {
 };
 
 async function fetchNodeData(pathArray: string[]) {
+  console.log('Original pathArray:', pathArray);
+  console.log('Original pathArray types:', pathArray.map(segment => typeof segment));
+  
   // Convert path array to a single path string, matching the original API route
   const path = pathArray.join('/');
+  console.log('Joined path:', path);
   
   try {
     // Convert the path to a node ID format
     const nodeId = path.startsWith('us/federal/ecfr/') ? path : `us/federal/ecfr/${path}`;
+    console.log('Node ID:', nodeId);
 
     // First, try to get the node directly by ID
     let { data: nodeData, error: nodeError } = await supabase
@@ -38,12 +43,17 @@ async function fetchNodeData(pathArray: string[]) {
     
     // If node not found directly, try to parse the path
     if (!nodeData || nodeData.length === 0) {
+      console.log('Node not found by ID, trying path parsing');
       // Parse path segments to identify the node
       const pathSegments = path.split('/');
+      console.log('Path segments:', pathSegments);
       const lastSegment = pathSegments[pathSegments.length - 1] || '';
+      console.log('Last segment:', lastSegment);
       const [levelType, number] = lastSegment.split('=');
+      console.log('Split result:', { levelType, number });
       
       if (!levelType || !number) {
+        console.error('Invalid path format:', { levelType, number });
         throw new Error('Invalid path format. Expected format: level_type=number');
       }
 
@@ -60,6 +70,7 @@ async function fetchNodeData(pathArray: string[]) {
       }
       
       if (!fallbackData || fallbackData.length === 0) {
+        console.error('No node found for path:', path);
         throw new Error(`No node found for path: ${path}`);
       }
       
