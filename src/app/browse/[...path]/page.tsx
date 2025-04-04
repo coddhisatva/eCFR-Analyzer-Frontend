@@ -21,7 +21,7 @@ async function fetchNodeData(pathArray: string[]) {
     const params = new URLSearchParams();
     params.append('path', pathString);
     
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/regulation?${params.toString()}`, {
+    const response = await fetch(`/api/regulation?${params.toString()}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store'

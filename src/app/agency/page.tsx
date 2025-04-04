@@ -5,7 +5,7 @@ import { SortControls } from "@/components/agency/sort-controls";
 
 async function fetchAgencies(sortBy: string = 'name', sortOrder: string = 'asc') {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/agencies?sortBy=${sortBy}&sortOrder=${sortOrder}`, {
+    const response = await fetch(`/api/agencies?sortBy=${sortBy}&sortOrder=${sortOrder}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store'

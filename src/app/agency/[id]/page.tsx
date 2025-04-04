@@ -15,7 +15,7 @@ interface Agency {
 
 async function fetchAgencyData(id: string) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/agencies/${id}`, {
+    const response = await fetch(`/api/agencies/${id}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store'
@@ -38,7 +38,7 @@ async function fetchParentAgencies(parentId: string | null): Promise<Agency[]> {
   if (!parentId) return [];
   
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/agencies/${parentId}`, {
+    const response = await fetch(`/api/agencies/${parentId}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store'
