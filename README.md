@@ -3,7 +3,7 @@
 A modern web application for browsing and analyzing the Electronic Code of Federal Regulations (eCFR).
 - one of two Repos for project
 
-Live site: https://vercel.com/conor-egans-projects/ecfr-analyzer
+Live site: https://ecfr-analyzer-lyart.vercel.app
 
 Processing Repo: https://github.com/coddhisatva/eCFR-Analyzer-Scripting
 
