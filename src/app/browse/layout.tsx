@@ -1,4 +1,6 @@
-import { AnalyticsSidebar } from "@/components/layout/analytics-sidebar";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export default function BrowseLayout({
   children,
@@ -9,9 +11,6 @@ export default function BrowseLayout({
     <div className="flex h-full">
       <div className="flex-1 overflow-y-auto">
         {children}
-      </div>
-      <div className="w-72 border-l overflow-y-auto bg-gray-50 p-4">
-        <AnalyticsSidebar />
       </div>
     </div>
   );
