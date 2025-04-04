@@ -193,7 +193,7 @@ export default async function NodePage({ params }: PageProps) {
               {nodeData.agencies.map((agency: Agency) => (
                 <Link
                   key={agency.id}
-                  href={`/agencies/${agency.id}`}
+                  href={`/agency/${agency.id}`}
                   className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div className="font-medium">{agency.name}</div>
