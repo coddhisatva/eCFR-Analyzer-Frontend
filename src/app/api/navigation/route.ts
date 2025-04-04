@@ -113,6 +113,25 @@ function toNavNode(node: RegulationNode): NavNode {
 
 export async function GET(request: NextRequest) {
   try {
+    // Log environment variables (but not the full key)
+    console.log('Environment check:', {
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_KEY,
+      urlStart: process.env.SUPABASE_URL?.substring(0, 10) + '...',
+    });
+
+    // Test Supabase connection
+    const { data: testData, error: testError } = await supabase
+      .from('nodes')
+      .select('count')
+      .limit(1);
+
+    console.log('Supabase connection test:', {
+      success: !testError,
+      error: testError?.message,
+      hasData: !!testData
+    });
+
     const url = new URL(request.url);
     const levels = url.searchParams.get('levels') || '0,1';
     const parentId = url.searchParams.get('parent');
