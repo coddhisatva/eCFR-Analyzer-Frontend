@@ -2,28 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { AgencyAnalyticsSidebar } from "@/components/layout/agency-analytics-sidebar";
 import { SortControls } from "@/components/agency/sort-controls";
+import { supabase } from "@/lib/supabase";
 
 export const runtime = 'nodejs';
-
-async function fetchAgencies(sortBy: string = 'name', sortOrder: string = 'asc') {
-  try {
-    const response = await fetch(`/api/agencies?sortBy=${sortBy}&sortOrder=${sortOrder}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store'
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching agencies:', error);
-    throw error;
-  }
-}
+export const dynamic = 'force-dynamic';
 
 export default async function AgencyPage({
   searchParams,
@@ -33,7 +15,17 @@ export default async function AgencyPage({
   try {
     const sortBy = typeof searchParams.sortBy === 'string' ? searchParams.sortBy : 'name';
     const sortOrder = typeof searchParams.sortOrder === 'string' ? searchParams.sortOrder : 'asc';
-    const agencies = await fetchAgencies(sortBy, sortOrder);
+
+    // Fetch directly from Supabase instead of through API route
+    const { data: agencies, error } = await supabase
+      .from('agencies')
+      .select('*')
+      .is('parent_id', null)
+      .order(sortBy, { ascending: sortOrder === 'asc' });
+
+    if (error) {
+      throw error;
+    }
 
     return (
       <div className="flex h-full">
