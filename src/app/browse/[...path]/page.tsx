@@ -22,7 +22,7 @@ async function fetchNodeData(pathArray: string[]) {
   console.log('Original pathArray types:', pathArray.map(segment => typeof segment));
   
   // Convert path array to a single path string, matching the original API route
-  const path = pathArray.join('/');
+  const path = pathArray.map(segment => decodeURIComponent(segment)).join('/');
   console.log('Joined path:', path);
   
   try {
@@ -148,7 +148,8 @@ async function fetchNodeData(pathArray: string[]) {
 export default async function NodePage({ params }: PageProps) {
   try {
     const { path } = params;
-    const pathString = path.join("/");
+    console.log('Page params path:', path);
+    console.log('Page params path types:', path.map(segment => typeof segment));
 
     // Fetch the node data
     const nodeData = await fetchNodeData(path);
@@ -318,6 +319,7 @@ export default async function NodePage({ params }: PageProps) {
         <div className="bg-red-50 border border-red-200 rounded p-4">
           <p className="text-red-700">There was an error loading the content.</p>
           <p className="text-red-600 text-sm mt-2">Error details: {error instanceof Error ? error.message : 'Unknown error'}</p>
+          <p className="text-red-600 text-sm mt-2">Path: {params.path.join('/')}</p>
         </div>
       </div>
     );
