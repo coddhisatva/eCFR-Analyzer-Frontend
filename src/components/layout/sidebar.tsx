@@ -36,7 +36,8 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
         const response = await fetch('/api/navigation?levels=0,1');
         
         if (!response.ok) {
-          throw new Error('Failed to fetch navigation data');
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch navigation data');
         }
         
         const data = await response.json();
@@ -44,7 +45,7 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
         setError(null);
       } catch (err) {
         console.error('Error fetching navigation:', err);
-        setError('Failed to load navigation. Please try again later.');
+        setError(err instanceof Error ? err.message : 'Failed to load navigation');
       } finally {
         setIsLoading(false);
       }
@@ -74,7 +75,8 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
 
       const response = await fetch(`/api/navigation?parent=${nodeId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch children');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch children');
       }
       
       const newChildren = await response.json();
@@ -95,7 +97,8 @@ export function Sidebar({ initialData = placeholderData }: SidebarProps) {
         return updateNodes(prevData);
       });
     } catch (err) {
-      setError(`Failed to load navigation items: ${(err as Error).message}`);
+      console.error('Error loading deeper levels:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load navigation items');
       // Reset loading state on error
       setNavData(prevData => {
         const updateNodes = (nodes: NavNode[]): NavNode[] => {
