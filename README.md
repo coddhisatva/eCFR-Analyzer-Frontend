@@ -3,18 +3,20 @@
 A modern web application for browsing and analyzing the Electronic Code of Federal Regulations (eCFR).
 - one of two Repos for project
 
-
-
 Live site: https://vercel.com/conor-egans-projects/ecfr-analyzer
-Processing Repo:
+Processing Repo: https://github.com/coddhisatva/eCFR-Analyzer-Scripting
 
 ## Features
 
-- Browse the hierarchical structure of the Code of Federal Regulations
-- View regulation content with proper formatting
-- Navigation through titles, chapters, subchapters, parts, and sections
-- History tracking of regulation changes (coming soon)
-- Analytics and insights about regulation content (coming soon)
+- Browse the hierarchical structure of the Code of Federal Regulations, including their analytics
+  - and see their related agencies, which link you to agency view
+- View regulation content
+- Browse federal Agencies, featuring in-depth analytics of each agency, as well as overall agency analytics by content and corrections
+  - Each agency displays and links to its exact subagencies, and CFR references
+- Broad metrics on historical regulation corrections
+- Ability to search for corrections based on range of dates
+- Query for regulations based on keywords, name, and title
+- Intuitive breadcrumb navigation for easy traversal of the regulation hierarchy
 
 ## Technology Stack
 
@@ -23,6 +25,23 @@ Processing Repo:
 - Tailwind CSS
 - React
 - ShadCN UI Components
+- Supabase for db 
+
+## Project Structure
+
+```
+src/
+├── app/                 # Next.js app router pages and API routes
+│   ├── api/            # API routes for data fetching
+│   ├── agency/         # Agency-related pages
+│   ├── browse/         # Regulation browsing pages
+│   └── corrections/    # Corrections-related pages
+├── components/         # Reusable UI components
+├── lib/               # Utility functions and shared logic
+│   └── supabase.ts    # Supabase client configuration
+├── types/             # TypeScript type definitions
+└── hooks/             # Custom React hooks
+```
 
 ## Getting Started
 
@@ -54,7 +73,12 @@ Processing Repo:
 Create a `.env.local` file in the root directory with the following variables:
 
 ```
-NEXT_PUBLIC_API_URL=http://localhost:8000  # URL to your backend API
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
+
+# Optional: App URL for development
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 ## Connecting to the Real Database
@@ -101,46 +125,7 @@ return NextResponse.json({
 });
 ```
 
-### 3. Backend API Requirements
-
-Your backend needs to provide the following endpoints:
-
-1. `/api/nodes` - Returns all regulation nodes for the navigation tree
-   ```json
-   [
-     {
-       "id": "title-1",
-       "citation": "Title 1",
-       "link": "/title=1",
-       "node_type": "structure",
-       "level_type": "title",
-       "number": "1",
-       "node_name": "General Provisions",
-       "parent": null
-     },
-     ...
-   ]
-   ```
-
-2. `/api/regulation?path=title=4/chapter=I` - Returns information about a specific regulation path
-   ```json
-   {
-     "nodeInfo": {
-       "id": "...",
-       "citation": "...",
-       "link": "...",
-       "node_type": "structure|content",
-       "level_type": "title|chapter|part|section",
-       "number": "...",
-       "node_name": "...",
-       "parent": "..."
-     },
-     "content": ["<p>HTML content...</p>", ...],
-     "childNodes": [...]
-   }
-   ```
-
-## Project Structure
+### 3. Project Structure
 
 - `/src/app` - Next.js app router pages
 - `/src/components` - React components
@@ -148,15 +133,3 @@ Your backend needs to provide the following endpoints:
 - `/src/app/api` - API routes for fetching data
   - `/navigation` - API route for fetching navigation tree
   - `/regulation` - API route for fetching regulation content
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
