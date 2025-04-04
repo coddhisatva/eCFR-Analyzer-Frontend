@@ -37,11 +37,11 @@ export default function HistoryPage() {
   // Initialize to current month and previous month
   const currentDate = new Date();
   const [startDate, setStartDate] = useState<DateSelection>({
-    month: currentDate.getMonth(),
+    month: currentDate.getMonth() - 1,  // Previous month
     year: currentDate.getFullYear()
   });
   const [endDate, setEndDate] = useState<DateSelection>({
-    month: currentDate.getMonth() + 1,
+    month: currentDate.getMonth(),  // Current month
     year: currentDate.getFullYear()
   });
 
