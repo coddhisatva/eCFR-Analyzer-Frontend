@@ -21,41 +21,89 @@ async function fetchNodeData(pathArray: string[]) {
   const pathString = pathArray.join('/');
   
   try {
-    // Get the node info first
-    const { data: nodeInfo, error: nodeError } = await supabase
-      .rpc('get_node_by_path', { path_param: pathString });
+    // Convert the path to a node ID format
+    const nodeId = pathString.startsWith('us/federal/ecfr/') ? pathString : `us/federal/ecfr/${pathString}`;
 
-    if (nodeError) throw nodeError;
-    if (!nodeInfo) throw new Error('Node not found');
+    // First, try to get the node directly by ID
+    let { data: nodeData, error: nodeError } = await supabase
+      .from('nodes')
+      .select('*')
+      .eq('id', nodeId);
+    
+    if (nodeError) {
+      console.error('Database error:', nodeError);
+      throw new Error(`Database error: ${nodeError.message}`);
+    }
+    
+    // If node not found directly, try to parse the path
+    if (!nodeData || nodeData.length === 0) {
+      // Parse path segments to identify the node
+      const pathSegments = pathString.split('/');
+      const lastSegment = pathSegments[pathSegments.length - 1] || '';
+      const [levelType, number] = lastSegment.split('=');
+      
+      if (!levelType || !number) {
+        throw new Error('Invalid path format. Expected format: level_type=number');
+      }
 
-    // Get content chunks if this is a content node
+      // Try to find the node by level type and number
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('nodes')
+        .select('*')
+        .eq('level_type', levelType)
+        .eq('number', number);
+      
+      if (fallbackError) {
+        console.error('Database error:', fallbackError);
+        throw new Error(`Database error: ${fallbackError.message}`);
+      }
+      
+      if (!fallbackData || fallbackData.length === 0) {
+        throw new Error(`No node found for path: ${pathString}`);
+      }
+      
+      nodeData = fallbackData;
+    }
+    
+    // Get the first matching node
+    const nodeInfo = nodeData[0];
+    
+    // If this is a content node, fetch the content chunks
     let content: string[] = [];
-    let childNodes: RegulationNode[] = [];
-
     if (nodeInfo.node_type === 'content') {
-      const { data: contentData, error: contentError } = await supabase
+      const { data: contentChunks, error: contentError } = await supabase
         .from('content_chunks')
-        .select('content')
+        .select('*')
         .eq('section_id', nodeInfo.id)
         .order('chunk_number', { ascending: true });
-
-      if (contentError) throw contentError;
-      content = contentData?.map(chunk => chunk.content) || [];
+      
+      if (contentError) {
+        console.error('Error fetching content:', contentError);
+        throw new Error(`Error fetching content: ${contentError.message}`);
+      }
+      
+      // Extract content from chunks
+      content = contentChunks?.map((chunk: any) => chunk.content) || [];
     }
-
+    
     // Get child nodes if this is a structure node
+    let childNodes: RegulationNode[] = [];
     if (nodeInfo.node_type === 'structure') {
       const { data: children, error: childrenError } = await supabase
         .from('nodes')
         .select('*')
         .eq('parent', nodeInfo.id)
         .order('display_order', { ascending: true });
-
-      if (childrenError) throw childrenError;
+      
+      if (childrenError) {
+        console.error('Error fetching child nodes:', childrenError);
+        throw new Error(`Error fetching child nodes: ${childrenError.message}`);
+      }
+      
       childNodes = children || [];
     }
 
-    // Get related agencies
+    // Get related agencies using the agency_node_mappings index
     const { data: agencies, error: agenciesError } = await supabase
       .from('agency_node_mappings')
       .select(`
@@ -66,14 +114,19 @@ async function fetchNodeData(pathArray: string[]) {
       `)
       .eq('node_id', nodeInfo.id);
 
-    if (agenciesError) throw agenciesError;
-
+    if (agenciesError) {
+      console.error('Error fetching related agencies:', agenciesError);
+      throw new Error(`Error fetching related agencies: ${agenciesError.message}`);
+    }
+    
+    // Return the complete regulation data
     return {
       nodeInfo,
       content,
       childNodes,
-      agencies: agencies?.map(record => record.agencies).flat() || []
+      agencies: agencies?.map(record => record.agencies) || []
     };
+    
   } catch (error) {
     console.error('Error fetching node data:', error);
     throw error;
