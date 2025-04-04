@@ -3,6 +3,8 @@ import Link from "next/link";
 import { AgencyAnalyticsSidebar } from "@/components/layout/agency-analytics-sidebar";
 import { SortControls } from "@/components/agency/sort-controls";
 
+export const runtime = 'nodejs';
+
 async function fetchAgencies(sortBy: string = 'name', sortOrder: string = 'asc') {
   try {
     const response = await fetch(`/api/agencies?sortBy=${sortBy}&sortOrder=${sortOrder}`, {

@@ -2,6 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { RegulationNode } from "@/types/regulation";
 
+export const runtime = 'nodejs';
+
 interface Agency {
   id: string;
   name: string;

@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { AgencyAnalyticsSidebar } from "@/components/layout/agency-analytics-sidebar";
 
+export const runtime = 'nodejs';
+
 interface Agency {
   id: string;
   name: string;
