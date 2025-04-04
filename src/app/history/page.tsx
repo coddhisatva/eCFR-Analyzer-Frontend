@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { addDays } from "date-fns";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface Correction {
   id: number;
@@ -30,11 +31,13 @@ export default function HistoryPage() {
     to: new Date(),
   });
 
-  useEffect(() => {
-    fetchCorrections();
-  }, [date]);
+  const handleDateChange = (newDate: { from: Date | undefined; to: Date | undefined }) => {
+    if (newDate.from && newDate.to) {
+      setDate({ from: newDate.from, to: newDate.to });
+    }
+  };
 
-  const fetchCorrections = async () => {
+  const handleSearch = async () => {
     if (!date.from || !date.to) return;
     
     setIsLoading(true);
@@ -58,14 +61,29 @@ export default function HistoryPage() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Correction History</h1>
-        <DatePickerWithRange date={date} onDateChange={setDate} />
+      {/* Search Section */}
+      <div className="mb-8 bg-white p-6 rounded-lg shadow">
+        <h1 className="text-3xl font-bold mb-4">Correction History Search</h1>
+        <div className="flex gap-4 items-end">
+          <div className="flex-1">
+            <div className="text-sm text-gray-500 mb-2">Select Date Range</div>
+            <DatePickerWithRange 
+              date={date} 
+              onDateChange={handleDateChange}
+            />
+          </div>
+          <Button 
+            size="lg"
+            onClick={handleSearch}
+            disabled={isLoading}
+          >
+            {isLoading ? "Searching..." : "Search Corrections"}
+          </Button>
+        </div>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-8">Loading corrections...</div>
-      ) : (
+      {/* Results Section */}
+      {corrections.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {corrections.map((correction) => (
             <Card key={correction.id}>
@@ -105,6 +123,10 @@ export default function HistoryPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      ) : (
+        <div className="text-center py-8 text-gray-500">
+          {isLoading ? "Searching for corrections..." : "Select a date range and click Search to find corrections"}
         </div>
       )}
     </div>
