@@ -6,54 +6,36 @@ const supabaseKey = process.env.SUPABASE_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const start_date = url.searchParams.get('start_date');
+  const end_date = url.searchParams.get('end_date');
+
+  console.log('Fetching corrections with dates:', { start_date, end_date });
+
+  if (!start_date || !end_date) {
+    return NextResponse.json({ error: 'Missing start_date or end_date' }, { status: 400 });
+  }
+
   try {
-    const url = new URL(request.url);
-    const start_date = url.searchParams.get('start_date');
-    const end_date = url.searchParams.get('end_date');
-
-    if (!start_date || !end_date) {
-      return NextResponse.json(
-        { error: 'Start and end dates are required' },
-        { status: 400 }
-      );
-    }
-
-    // Use the corrections_occurred_idx index for efficient date range filtering
-    const { data: corrections, error } = await supabase
+    let query = supabase
       .from('corrections')
-      .select(`
-        id,
-        error_occurred,
-        error_corrected,
-        correction_duration,
-        nodes!inner (
-          id,
-          citation,
-          node_name
-        ),
-        agencies!inner (
-          id,
-          name
-        )
-      `)
+      .select('*')
       .gte('error_occurred', start_date)
       .lte('error_occurred', end_date)
       .order('error_occurred', { ascending: false });
+    
+    const { data: corrections, error } = await query;
 
     if (error) {
-      console.error('Error fetching corrections:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch corrections' },
-        { status: 500 }
-      );
+      console.error('Database error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    console.log(`Found ${corrections?.length || 0} corrections`);
+    
     return NextResponse.json({ corrections });
   } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Unexpected error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

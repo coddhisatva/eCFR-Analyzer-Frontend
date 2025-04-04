@@ -6,34 +6,30 @@ import { addDays } from "date-fns";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DateRange } from "react-day-picker";
 
 interface Correction {
   id: number;
   error_occurred: string;
   error_corrected: string;
   correction_duration: number;
-  node: {
-    id: string;
-    citation: string;
-    node_name: string;
-  };
-  agency: {
-    id: string;
-    name: string;
-  };
+  node_id: string;
+  agency_id: string;
+  title: number;
 }
 
 export default function HistoryPage() {
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [date, setDate] = useState({
+  const [error, setError] = useState<string | null>(null);
+  const [date, setDate] = useState<DateRange>({
     from: addDays(new Date(), -30),
     to: new Date(),
   });
 
-  const handleDateChange = (newDate: { from: Date | undefined; to: Date | undefined }) => {
-    if (newDate.from && newDate.to) {
-      setDate({ from: newDate.from, to: newDate.to });
+  const handleDateChange = (newDate: DateRange | undefined) => {
+    if (newDate?.from && newDate?.to) {
+      setDate(newDate);
     }
   };
 
@@ -41,6 +37,7 @@ export default function HistoryPage() {
     if (!date.from || !date.to) return;
     
     setIsLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({
         start_date: date.from.toISOString().split('T')[0],
@@ -48,12 +45,17 @@ export default function HistoryPage() {
       });
 
       const response = await fetch(`/api/corrections?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch corrections');
-      
       const data = await response.json();
-      setCorrections(data.corrections);
-    } catch (error) {
-      console.error('Error fetching corrections:', error);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch corrections');
+      }
+      
+      console.log('Received corrections:', data.corrections?.length || 0);
+      setCorrections(data.corrections || []);
+    } catch (err) {
+      console.error('Error:', err);
+      setError((err as Error).message);
     } finally {
       setIsLoading(false);
     }
@@ -80,6 +82,9 @@ export default function HistoryPage() {
             {isLoading ? "Searching..." : "Search Corrections"}
           </Button>
         </div>
+        {error && (
+          <div className="mt-4 text-red-600">{error}</div>
+        )}
       </div>
 
       {/* Results Section */}
@@ -90,19 +95,9 @@ export default function HistoryPage() {
               <CardContent className="pt-6">
                 <div className="space-y-4">
                   <div>
-                    <Link 
-                      href={`/browse/${correction.node.id}`}
-                      className="text-lg font-medium text-blue-600 hover:underline"
-                    >
-                      {correction.node.citation}
-                    </Link>
-                    <p className="text-sm text-gray-600 mt-1">{correction.node.node_name}</p>
-                    <Link
-                      href={`/agencies/${correction.agency.id}`}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {correction.agency.name}
-                    </Link>
+                    <h3 className="text-lg font-medium">Title {correction.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1">Node ID: {correction.node_id}</p>
+                    <p className="text-sm text-gray-600">Agency ID: {correction.agency_id}</p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 text-sm">
