@@ -1,6 +1,12 @@
 # eCFR Analyzer Frontend
 
 A modern web application for browsing and analyzing the Electronic Code of Federal Regulations (eCFR).
+- one of two Repos for project
+
+
+
+Live site: https://vercel.com/conor-egans-projects/ecfr-analyzer
+Processing Repo:
 
 ## Features
 

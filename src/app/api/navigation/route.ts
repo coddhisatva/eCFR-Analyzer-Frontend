@@ -3,9 +3,17 @@ import { RegulationNode } from '@/types/regulation';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_KEY || '';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(`Missing Supabase configuration. URL: ${!!supabaseUrl}, Key: ${!!supabaseKey}`);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Specify Node.js runtime
+export const runtime = 'nodejs';
 
 // Navigation node type (frontend node)
 interface NavNode {
@@ -33,9 +41,16 @@ async function fetchRootNodes(): Promise<RegulationNode[]> {
     .order('top_level_title', { ascending: true });
 
   if (error) {
-    throw new Error(`Failed to fetch root nodes: ${error.message}`);
+    console.error('Error fetching root nodes:', error);
+    throw error;
   }
-  return data as RegulationNode[];
+  
+  if (!data) {
+    console.error('No root nodes found');
+    throw new Error('No root nodes found');
+  }
+  
+  return data;
 }
 
 // Fetch children by parent id
@@ -123,8 +138,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(navNodes);
 
   } catch (error) {
+    console.error('Navigation API error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch navigation data', details: (error as Error).message },
+      { 
+        error: 'Failed to fetch navigation data', 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
+      },
       { status: 500 }
     );
   }
