@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { addDays } from "date-fns";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DateRange } from "react-day-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Correction {
   id: number;
@@ -20,30 +24,44 @@ interface Correction {
   };
 }
 
+interface DateSelection {
+  month: number;
+  year: number;
+}
+
 export default function HistoryPage() {
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [date, setDate] = useState<DateRange>({
-    from: addDays(new Date(), -30),
-    to: new Date(),
+  
+  // Initialize to current month and previous month
+  const currentDate = new Date();
+  const [startDate, setStartDate] = useState<DateSelection>({
+    month: currentDate.getMonth(),
+    year: currentDate.getFullYear()
+  });
+  const [endDate, setEndDate] = useState<DateSelection>({
+    month: currentDate.getMonth() + 1,
+    year: currentDate.getFullYear()
   });
 
-  const handleDateChange = (newDate: DateRange | undefined) => {
-    if (newDate?.from && newDate?.to) {
-      setDate(newDate);
-    }
-  };
+  // Generate arrays for dropdowns
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i);
 
   const handleSearch = async () => {
-    if (!date.from || !date.to) return;
-    
     setIsLoading(true);
     setError(null);
     try {
+      const startDateStr = `${startDate.year}-${String(startDate.month + 1).padStart(2, '0')}-01`;
+      const endDateStr = `${endDate.year}-${String(endDate.month + 1).padStart(2, '0')}-01`;
+
       const params = new URLSearchParams({
-        start_date: date.from.toISOString().split('T')[0],
-        end_date: date.to.toISOString().split('T')[0]
+        start_date: startDateStr,
+        end_date: endDateStr
       });
 
       const response = await fetch(`/api/corrections?${params.toString()}`);
@@ -68,14 +86,73 @@ export default function HistoryPage() {
       {/* Search Section */}
       <div className="mb-8 bg-white p-6 rounded-lg shadow">
         <h1 className="text-3xl font-bold mb-4">Correction History Search</h1>
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
-            <div className="text-sm text-gray-500 mb-2">Select Date Range</div>
-            <DatePickerWithRange 
-              date={date} 
-              onDateChange={handleDateChange}
-            />
+        <div className="flex gap-6 items-end">
+          {/* Start Date */}
+          <div className="space-y-2">
+            <div className="text-sm text-gray-500">Start Date</div>
+            <div className="flex gap-2">
+              <Select
+                value={String(startDate.month)}
+                onValueChange={(value) => setStartDate({ ...startDate, month: parseInt(value) })}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue>{months[startDate.month]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month, i) => (
+                    <SelectItem key={i} value={String(i)}>{month}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(startDate.year)}
+                onValueChange={(value) => setStartDate({ ...startDate, year: parseInt(value) })}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue>{startDate.year}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {/* End Date */}
+          <div className="space-y-2">
+            <div className="text-sm text-gray-500">End Date</div>
+            <div className="flex gap-2">
+              <Select
+                value={String(endDate.month)}
+                onValueChange={(value) => setEndDate({ ...endDate, month: parseInt(value) })}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue>{months[endDate.month]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month, i) => (
+                    <SelectItem key={i} value={String(i)}>{month}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(endDate.year)}
+                onValueChange={(value) => setEndDate({ ...endDate, year: parseInt(value) })}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue>{endDate.year}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <Button 
             size="lg"
             onClick={handleSearch}
