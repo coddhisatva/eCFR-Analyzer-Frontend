@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type AnalyticsData = {
   topAgencies: { name: string; count: number }[];
@@ -66,8 +72,17 @@ export function HistoryAnalyticsSidebar() {
         <CardContent>
           <div className="space-y-2">
             {data.topAgencies.map((agency, i) => (
-              <div key={i} className="flex justify-between items-center">
-                <span className="text-sm truncate">{agency.name}</span>
+              <div key={i} className="flex justify-between items-center hover:bg-gray-100 p-2 rounded transition-colors">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-sm truncate">{agency.name}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{agency.name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <span className="text-sm font-medium">{agency.count}</span>
               </div>
             ))}
@@ -82,8 +97,17 @@ export function HistoryAnalyticsSidebar() {
         <CardContent>
           <div className="space-y-2">
             {data.topNodes.map((node, i) => (
-              <div key={i} className="flex justify-between items-center">
-                <span className="text-sm truncate">{node.name}</span>
+              <div key={i} className="flex justify-between items-center hover:bg-gray-100 p-2 rounded transition-colors">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-sm truncate">{node.name}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{node.name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <span className="text-sm font-medium">{node.count}</span>
               </div>
             ))}
@@ -98,8 +122,17 @@ export function HistoryAnalyticsSidebar() {
         <CardContent>
           <div className="space-y-2">
             {data.longestCorrections.map((correction, i) => (
-              <div key={i} className="flex justify-between items-center">
-                <span className="text-sm truncate">{correction.title}</span>
+              <div key={i} className="flex justify-between items-center hover:bg-gray-100 p-2 rounded transition-colors">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-sm truncate">{correction.title}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{correction.title}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <span className="text-sm font-medium">{correction.duration} days</span>
               </div>
             ))}

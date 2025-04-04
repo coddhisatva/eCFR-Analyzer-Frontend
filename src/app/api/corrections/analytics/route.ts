@@ -26,6 +26,7 @@ export async function GET() {
     const { data: longestCorrections } = await supabase
       .from('corrections')
       .select('correction_duration, title')
+      .not('correction_duration', 'is', null)
       .order('correction_duration', { ascending: false })
       .limit(5);
 
