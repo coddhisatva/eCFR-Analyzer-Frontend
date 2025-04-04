@@ -2,6 +2,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { RegulationNode } from "@/types/regulation";
 
+interface Agency {
+  id: string;
+  name: string;
+}
+
 type PageProps = {
   params: {
     path: string[];
@@ -161,7 +166,6 @@ export default async function NodePage({ params }: PageProps) {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {childNodes.map((child: RegulationNode) => {
-                // Convert full URL or path to our format
                 const pathSegment = `${child.level_type}=${child.number}`;
                 const childPath = path.length > 0 ? `${path.join('/')}/${pathSegment}` : pathSegment;
                 
@@ -171,11 +175,30 @@ export default async function NodePage({ params }: PageProps) {
                     href={`/browse/${childPath}`}
                     className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    <div className="font-medium">{child.citation}</div>
-                    <div className="text-sm text-gray-600 truncate">{child.node_name}</div>
+                    <div className="font-medium">{child.node_name}</div>
                   </Link>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* Agencies section */}
+        {nodeData.agencies?.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold">
+              Related Agencies <span className="text-gray-500 text-lg">({nodeData.agencies.length})</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {nodeData.agencies.map((agency: Agency) => (
+                <Link
+                  key={agency.id}
+                  href={`/agencies/${agency.id}`}
+                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="font-medium">{agency.name}</div>
+                </Link>
+              ))}
             </div>
           </div>
         )}

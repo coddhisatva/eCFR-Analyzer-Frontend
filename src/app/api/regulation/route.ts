@@ -127,12 +127,31 @@ export async function GET(request: NextRequest) {
       
       childNodes = children || [];
     }
+
+    // Get related agencies using the agency_node_mappings index
+    const { data: agencies, error: agenciesError } = await supabase
+      .from('agency_node_mappings')
+      .select(`
+        agencies (
+          id,
+          name
+        )
+      `)
+      .eq('node_id', nodeInfo.id);
+
+    if (agenciesError) {
+      return NextResponse.json(
+        { error: `Error fetching related agencies: ${agenciesError.message}` },
+        { status: 500 }
+      );
+    }
     
     // Return the complete regulation data
     return NextResponse.json({
       nodeInfo,
       content,
-      childNodes
+      childNodes,
+      agencies: agencies?.map(record => record.agencies) || []
     });
     
   } catch (error) {
