@@ -50,7 +50,11 @@ export default function HistoryPage() {
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
-  const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i);
+  const currentYear = currentDate.getFullYear();
+  const years = Array.from(
+    { length: currentYear - 2000 + 1 }, 
+    (_, i) => currentYear - i
+  );
 
   const handleSearch = async () => {
     setIsLoading(true);
