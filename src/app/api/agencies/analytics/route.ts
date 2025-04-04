@@ -18,8 +18,8 @@ interface MetricSums {
 export async function GET() {
   try {
     const supabase = createClient(
-      process.env.SUPABASE_URL || '',
-      process.env.SUPABASE_KEY || ''
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_KEY || ''
     );
 
     // Get total count of agencies

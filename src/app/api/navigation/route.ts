@@ -26,13 +26,13 @@ export async function GET(request: NextRequest) {
   try {
     // Log environment variables (but not the full key)
     console.log('Environment check:', {
-      hasUrl: !!process.env.SUPABASE_URL,
-      hasKey: !!process.env.SUPABASE_KEY,
-      urlStart: process.env.SUPABASE_URL?.substring(0, 10) + '...',
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_KEY,
+      urlStart: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 10) + '...',
     });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
       console.error('Missing Supabase configuration:', {

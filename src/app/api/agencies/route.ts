@@ -10,8 +10,8 @@ export async function GET(request: Request) {
     const sortOrder = searchParams.get('sortOrder') || (sortBy === 'name' ? 'asc' : 'desc');
 
     const supabase = createClient(
-      process.env.SUPABASE_URL || '',
-      process.env.SUPABASE_KEY || ''
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_KEY || ''
     );
 
     // Fetch root agencies (where parent_id is null)
